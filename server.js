@@ -98,6 +98,19 @@ app.get('/api/products/:id', async (req, res) => {
 });
 
 
+app.get('/api/users', async (req, res) => {
+    try {
+        const db = await getDbPool();
+        const query = `
+        SELECT * FROM user`;
+        const [rows] = await db.query(query);
+        res.json(rows);
+    } catch (error) {
+        console.error(`Failed to fetch users`, error);
+        res.status(500).json({ message: 'Error fetching users.' });
+    }
+});
+
 // --- Authentication Routes (Adjusted for 'user' table) ---
 /**
  * POST /api/auth/register
