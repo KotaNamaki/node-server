@@ -1,0 +1,11 @@
+# Abaikan file konfigurasi lokal
+.env
+
+# Abaikan semua file log
+*.log
+
+# Abaikan folder hasil build
+/dist
+
+# Abaikan folder yang berisi modul Node.js
+node_modules/
