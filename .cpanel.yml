@@ -3,7 +3,7 @@
 ---
 deployment:
   tasks:
-    - export DEPLOYPATH=/home/motodivs/public_html/api/
+    - export DEPLOYPATH=/home/motodivs/api/
     - /bin/cp database.js $DEPLOYPATH
     - /bin/cp server.js $DEPLOYPATH
     - /bin/cp package.json $DEPLOYPATH
