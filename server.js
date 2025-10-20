@@ -102,7 +102,8 @@ app.get('/api/users', async (req, res) => {
     try {
         const db = await getDbPool();
         const query = `
-        SELECT * FROM user`;
+        SELECT user_id, nama, email, no_hp, role
+        FROM user`;
         const [rows] = await db.query(query);
         res.json(rows);
     } catch (error) {
