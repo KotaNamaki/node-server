@@ -1,8 +1,7 @@
 ---
 deployment:
   task:
-    - export DEPLOY_PATH = /home/motodivs/public_html/api/
+    - export DEPLOY_PATH = /home/motodivs/public_html/
     - /bin/cp database.js $DEPLOY_PATH
     - /bin/cp server.js $DEPLOY_PATH
     - /bin/cp package.json $DEPLOY_PATH
-    - /bin/cp package-lock.json $DEPLOY_PATH
