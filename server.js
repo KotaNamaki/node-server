@@ -97,24 +97,59 @@ app.get('/api/products/:id', async (req, res) => {
     }
 });
 
-// Asumsi: const pool = mysql.createPool({...});
-// (menggunakan library 'mysql2/promise')
+app.post('/api/products', async (req, res) => {
+    try {
+        const { nama, kategori, deskripsi, harga, stok, gambar } = req.body;
 
-app.patch('/api/products/:id', async (req, res) => {
+        // PERBAIKAN 1: Validasi disesuaikan (hanya cek yang wajib)
+        // Jika stok dan gambar juga wajib, tambahkan '!stok || !gambar' di bawah.
+        if (!nama || !kategori || !deskripsi || !harga) {
+            return res.status(400).json({ message: 'Nama, kategori, deskripsi, dan harga wajib diisi!' });
+        }
+
+        const db = await getDbPool();
+
+        // Cek duplikat
+        const [existingProduct] = await db.query('SELECT id_produk FROM Produk WHERE nama = ?', [nama]);
+        // PERBAIKAN 2: Gunakan status 409 jika sudah ada
+        if (existingProduct.length > 0) {
+            return res.status(409).json({ message: 'Produk dengan nama ini sudah ada.' });
+        }
+
+        // PERBAIKAN 3: Perbaiki jumlah placeholder '?' menjadi 6
+        const [result] = await db.query(
+            'INSERT INTO Produk (nama, kategori, deskripsi, harga, stok, gambar) VALUES (?, ?, ?, ?, ?, ?)',
+            [nama, kategori, deskripsi, harga, stok, gambar]
+        );
+        // PERBAIKAN 4: Perbaiki syntax JSON, ganti status ke 201, dan perbaiki typo
+        res.status(201).json({
+            message: 'Produk telah dimasukkan',
+            produkID: result.insertId
+        });
+
+    } catch (error) {
+        console.error('Gagal menambah produk:', error);
+        res.status(500).json({ message: 'Server Error saat penambahan.' });
+    }
+});
+
+app.post('/api/buy/:id', async (req, res) => {
     let connection; // Mendefinisikan koneksi di luar try
     try {
         const { id } = req.params;
         const { jumlah } = req.body;
+        const jumlahBeli = parseInt(jumlah, 10);
 
         // 1. Validasi Input
         if (!/^\d+$/.test(String(id))) {
             return res.status(400).json({ message: 'ID item tidak valid.' });
         }
-        if (!jumlah || typeof jumlah !== 'number' || jumlah <= 0) {
+        if (isNaN(jumlahBeli) || jumlahBeli <= 0) {
             return res.status(400).json({ message: 'Jumlah pembelian tidak valid.' });
         }
 
         // Dapatkan koneksi dari pool
+        const pool = await getDbPool();
         connection = await pool.getConnection();
 
         // 2. Memulai Transaksi
@@ -136,14 +171,14 @@ app.patch('/api/products/:id', async (req, res) => {
         const stokSaatIni = rows[0].stok;
 
         // 4. Cek ketersediaan stok
-        if (stokSaatIni < jumlah) {
+        if (stokSaatIni < jumlahBeli) {
             await connection.rollback(); // Batalkan transaksi
             connection.release();
             return res.status(400).json({ message: 'Stok tidak mencukupi.' });
         }
 
         // 5. Hitung dan update stok baru
-        const stokBaru = stokSaatIni - jumlah;
+        const stokBaru = stokSaatIni - jumlahBeli;
         await connection.query(
             'UPDATE Produk SET stok = ? WHERE id_produk = ?',
             [stokBaru, id]
@@ -341,4 +376,3 @@ app.listen(PORT, () => {
     // eslint-disable-next-line no-console
     console.log(`Server running on http://localhost:${PORT}`);
 });
-
