@@ -49,12 +49,12 @@ app.get('/api/products', async (req, res) => {
         // Using aliases (e.g., id_produk AS id) to match the front-end's expected JSON structure
         const query = `
       SELECT 
-        id_produk AS id, 
-        nama AS name, 
-        deskripsi AS description, 
-        harga AS price, 
-        stok AS stock_quantity, 
-        gambar AS image_url 
+        id_produk, 
+        nama, 
+        deskripsi, 
+        harga, 
+        stok, 
+        gambar 
       FROM Produk 
       WHERE stok > 0
     `;
@@ -76,11 +76,11 @@ app.get('/api/products/:id', async (req, res) => {
         const db = await getDbPool();
         const query = `
         SELECT 
-          id_produk AS id, 
-          nama AS name, 
-          deskripsi AS description, 
-          harga AS price, 
-          stok AS stock_quantity, 
+          id_produk , 
+          nama , 
+          deskripsi , 
+          harga , 
+          stok , 
           gambar AS image_url 
         FROM Produk 
         WHERE id_produk = ?
@@ -97,6 +97,83 @@ app.get('/api/products/:id', async (req, res) => {
     }
 });
 
+// Asumsi: const pool = mysql.createPool({...});
+// (menggunakan library 'mysql2/promise')
+
+app.patch('/api/products/:id', async (req, res) => {
+    let connection; // Mendefinisikan koneksi di luar try
+    try {
+        const { id } = req.params;
+        const { jumlah } = req.body;
+
+        // 1. Validasi Input
+        if (!/^\d+$/.test(String(id))) {
+            return res.status(400).json({ message: 'ID item tidak valid.' });
+        }
+        if (!jumlah || typeof jumlah !== 'number' || jumlah <= 0) {
+            return res.status(400).json({ message: 'Jumlah pembelian tidak valid.' });
+        }
+
+        // Dapatkan koneksi dari pool
+        connection = await pool.getConnection();
+
+        // 2. Memulai Transaksi
+        await connection.beginTransaction();
+
+        // 3. Ambil data & KUNCI barisnya (FOR UPDATE)
+        // Ini penting agar tidak ada proses lain yang mengubah stok ini
+        const [rows] = await connection.query(
+            'SELECT stok FROM Produk WHERE id_produk = ? FOR UPDATE',
+            [id]
+        );
+
+        if (rows.length === 0) {
+            await connection.rollback(); // Batalkan transaksi
+            connection.release();
+            return res.status(404).json({ message: 'Produk tidak ditemukan.' });
+        }
+
+        const stokSaatIni = rows[0].stok;
+
+        // 4. Cek ketersediaan stok
+        if (stokSaatIni < jumlah) {
+            await connection.rollback(); // Batalkan transaksi
+            connection.release();
+            return res.status(400).json({ message: 'Stok tidak mencukupi.' });
+        }
+
+        // 5. Hitung dan update stok baru
+        const stokBaru = stokSaatIni - jumlah;
+        await connection.query(
+            'UPDATE Produk SET stok = ? WHERE id_produk = ?',
+            [stokBaru, id]
+        );
+
+        // 6. Simpan perubahan (Commit)
+        await connection.commit();
+
+        // 7. Ambil data terbaru (karena MySQL tidak punya 'RETURNING')
+        const [updatedProduct] = await connection.query(
+            'SELECT * FROM Produk WHERE id_produk = ?',
+            [id]
+        );
+
+        connection.release(); // Kembalikan koneksi ke pool
+        res.status(200).json({
+            message: 'Pembelian berhasil, stok diperbarui.',
+            data: updatedProduct[0]
+        });
+
+    } catch (error) {
+        console.error(error);
+        // Jika terjadi error, batalkan semua perubahan (rollback)
+        if (connection) {
+            await connection.rollback();
+            connection.release();
+        }
+        res.status(500).json({ message: 'Terjadi kesalahan pada server.' });
+    }
+});
 
 app.get('/api/users', async (req, res) => {
     try {
@@ -181,7 +258,7 @@ app.post('/api/auth/login', async (req, res) => {
         const token = jwt.sign(
             { userId: user.user_id, email: user.email, role: user.role },
             JWT_SECRET,
-            { expiresIn: '1h' } // Token expires in 1 hour
+            { expiresIn: '3h' } // Token expires in 1 hour
         );
 
         res.json({ message: 'Logged in successfully!', token });
