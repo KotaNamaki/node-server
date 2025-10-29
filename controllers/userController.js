@@ -1,5 +1,6 @@
 const { getDbPool } = require('../database');
 const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
 
 // Logic starts here
 const getUserById = async (req, res) => {
@@ -32,7 +33,7 @@ const getUserByEmail = async (req, res) => {
         console.error(`Failed to get email ${req.params.email}:`, error);
         res.status(500).json({ message: 'Error fetching user email.' });
     }
-}
+};
 
 
 
@@ -114,7 +115,76 @@ const updateUser = async (req, res) => {
         console.error('Failed to update user:', error);
         return res.status(500).json({ message: 'Server error while updating user.' });
     }
-}
+};
+
+const userLogin = async (req, res) => {
+    try {
+        const { email, password } = req.body; // Credentials from client
+        if (!email || !password) {
+            return res.status(400).json({ message: 'Email and password are required.' });
+        }
+
+        const db = await getDbPool();
+        // Fetching from 'user' table and selecting the hashed password column
+        const [users] = await db.query('SELECT * FROM user WHERE email = ?', [email]);
+        if (users.length === 0) {
+            return res.status(401).json({ message: 'Invalid credentials.' });
+        }
+
+        const user = users[0];
+        // Comparing plaintext with the hashed password stored in DB
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) {
+            return res.status(401).json({ message: 'Invalid credentials.' });
+        }
+
+        // Create JWT signed with secret; includes basic claims for authorization
+        const token = jwt.sign(
+            { userId: user.user_id, email: user.email, role: user.role },
+            JWT_SECRET,
+            { expiresIn: '3h' } // Token expires in 1 hour
+        );
+
+        res.json({ message: 'Logged in successfully!', token });
+
+    } catch (error) {
+        console.error('Login failed:', error);
+        res.status(500).json({ message: 'Server error during login.' });
+    }
+};
+
+const userRegister = async (req, res) => {
+    try {
+        // Now expecting 'nama' and 'no_hp' from the request body
+        const { nama, email, password, no_hp } = req.body;
+        if (!email || !password || !nama || !no_hp) {
+            return res.status(400).json({ message: 'Nama, email, password, dan no_hp wajib diisi.' });
+        }
+        const db = await getDbPool();
+        // Check if user already exists
+        const [existingUsers] = await db.query('SELECT user_id FROM user WHERE email = ?', [email]);
+        if (existingUsers.length > 0) {
+            return res.status(409).json({ message: 'Akun dengan email ini sudah ada.' });
+        }
+
+        // Hash the password with a per-user salt before storing in the database
+        const salt = await bcrypt.genSalt(10);
+        const passwordHash = await bcrypt.hash(password, salt);
+
+        // Insert the new user record
+        const [result] = await db.query(
+            'INSERT INTO user (nama, email, password, no_hp, role) VALUES (?, ?, ?, ?, ?)',
+            [nama, email, passwordHash, no_hp, 'customer'] // Default role to 'customer'
+        );
+
+        res.status(201).json({ message: 'User registered successfully!', userId: result.insertId });
+
+    } catch (error) {
+        console.error('Registration failed:', error);
+        res.status(500).json({ message: 'Server error during registration.' });
+    }
+};
+
 // Logic ends here
 
 module.exports = {
@@ -122,5 +192,8 @@ module.exports = {
     getUser,
     updateUser,
     getUserByEmail,
+    userLogin,
+    userRegister,
+
 
 }
