@@ -609,7 +609,12 @@ app.post('/api/payments', async (req, res) => {
 });
 
 // --- Start the server ---
-app.listen(PORT, () => {
-    // eslint-disable-next-line no-console
-    console.log(`Server running on http://localhost:${PORT}`);
-});
+if (process.env.NODE_ENV !== 'test') {
+    app.listen(PORT, () => {
+        // eslint-disable-next-line no-console
+        console.log(`Server running on http://localhost:${PORT}`);
+    });
+}
+
+// Export app for testing
+module.exports = app;
