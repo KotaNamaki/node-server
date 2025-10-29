@@ -14,7 +14,7 @@
 
 const mysql = require('mysql2/promise'); // Promise-based MySQL client
 const { Client } = require('ssh2'); // SSH client for tunneling
-require('dotenv').config(); // Load env vars
+require('dotenv').config();
 
 // SSH connection options. We connect to this host and then forward to the DB host:port
 const sshConfig = {
