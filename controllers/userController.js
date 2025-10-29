@@ -1,5 +1,7 @@
 const { getDbPool } = require('../database');
 const bcrypt = require("bcryptjs");
+
+// Logic starts here
 const getUserById = async (req, res) => {
     try {
         const { id } = req.params;
@@ -15,6 +17,24 @@ const getUserById = async (req, res) => {
         res.status(500).json({ message: 'Error fetching user.' });
     }
 };
+
+const getUserByEmail = async (req, res) => {
+    try {
+        const { email } = req.params;
+        const db = await getDbPool();
+        const query = 'SELECT user_id, nama, email, no_hp, role FROM user WHERE email = ?';
+        const [rows] = await db.query(query, [email]);
+        if (rows.length === 0) {
+            return res.status(404).json({ message: 'User with that email not found.' });
+        }
+        res.json(rows[0]);
+    } catch (error) {
+        console.error(`Failed to get email ${req.params.email}:`, error);
+        res.status(500).json({ message: 'Error fetching user email.' });
+    }
+}
+
+
 
 const getUser = async (req, res) => {
     try {
@@ -95,10 +115,12 @@ const updateUser = async (req, res) => {
         return res.status(500).json({ message: 'Server error while updating user.' });
     }
 }
+// Logic ends here
 
 module.exports = {
     getUserById,
     getUser,
     updateUser,
+    getUserByEmail,
 
 }
