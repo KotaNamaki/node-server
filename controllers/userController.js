@@ -1,6 +1,7 @@
 const { getDbPool } = require('../database');
 const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
+const jwt = process.env.JWT_SECRET;
+
 
 // Logic starts here
 const getUserById = async (req, res) => {
