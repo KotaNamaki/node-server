@@ -36,8 +36,6 @@ const getUserByEmail = async (req, res) => {
     }
 };
 
-
-
 const getUser = async (req, res) => {
     try {
         const db = await getDbPool();
@@ -187,7 +185,6 @@ const userRegister = async (req, res) => {
 };
 
 // Logic ends here
-
 module.exports = {
     getUserById,
     getUser,
