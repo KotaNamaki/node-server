@@ -221,10 +221,11 @@ const getOrderById = async (req, res) => {
     } finally {
         if (connection) connection.release();
     }
-}
+};
 //logi ends here
 module.exports = {
     addOrder,
     addPayment,
     getOrderById,
+    getAllOrders,
 };

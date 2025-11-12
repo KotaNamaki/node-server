@@ -8,7 +8,7 @@ const { authReq } = require('../middleware/authMiddleWare');
 router.use(authReq);
 
 router.post('/', orderController.addOrder); // Checkout
-router.get('/:id', orderController.getOrderById);
+router.get('/get/:id', orderController.getOrderById);
 router.post('/:id/payments', orderController.addPayment); // <-- URL Diubah
-
+router.get('/get', orderController.getOrderById);
 module.exports = router;
