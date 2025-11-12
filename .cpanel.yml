@@ -7,3 +7,6 @@ deployment:
     - /bin/cp database.js $DEPLOYPATH
     - /bin/cp server.js $DEPLOYPATH
     - /bin/cp package.json $DEPLOYPATH
+    - /bin/cp -R controllers $DEPLOYPATH
+    - /bin/cp -R middleware $DEPLOYPATH
+    - /bin/cp -R routes $DEPLOYPATH
