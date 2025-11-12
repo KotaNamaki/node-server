@@ -24,11 +24,21 @@ const app = express(); // Initialize Express application
 const PORT = process.env.PORT || 3000; // HTTP port; default to 3000 when not set
 
 // --- Middleware ---
-app.use(cors()); // Allow calls from other origins (e.g., React app on a different port)
+app.use(cors({
+    origin: ['https://motodiv.store', 'https://motodiv.store/api', 'https://admin.motodiv.store'],
+    methods: ['GET','POST','PATCH','DELETE'],
+    credentials: true
+})); // Allow calls from other origins (e.g., React app on a different port)
 app.use(express.json()); // Parse JSON request bodies into req.body
+
 const ProductRoutes = require('./routes/productRoutes');
 const UserRoutes = require('./routes/usersRoutes');
-const OrderRoutes = require('./routes/purchaseRoutes')
+const OrderRoutes = require('./routes/orderRoutes')
+
+app.use((err, req, res) => {
+    console.log(err);
+    res.status(500).json({ message: 'Terjadi Error: ', err});
+});
 
 app.get('/', (req, res) => {
     res.send('E-commerce API is running!');

@@ -1,84 +1,12 @@
 const {getDbPool} = require("../database");
 
-
 // Logic Starts here
-const addToCart = async (req, res) => {
-    let connection = null;
-    try {
 
-        const { user_id, id_produk, qty } = req.body || {};
-        const userId = parseInt(user_id, 10);
-        const produkId = parseInt(id_produk, 10);
-        const jumlah = parseInt(qty, 10);
-
-        if (!Number.isInteger(userId) || userId <= 0) {
-            return res.status(400).json({ message: 'user_id tidak valid.' });
-        }
-        if (!Number.isInteger(produkId) || produkId <= 0) {
-            return res.status(400).json({ message: 'id_produk tidak valid.' });
-        }
-        if (!Number.isInteger(jumlah) || jumlah <= 0) {
-            return res.status(400).json({ message: 'jumlah harus bilangan bulat > 0.' });
-        }
-
-        const pool = await getDbPool();
-        connection = await pool.getConnection();
-        await connection.beginTransaction();
-
-        // Pastikan user ada
-        const [userRows] = await connection.query('SELECT user_id FROM User WHERE user_id = ?', [userId]);
-        if (userRows.length === 0) {
-            await connection.rollback();
-            connection.release();
-            return res.status(404).json({ message: 'User tidak ditemukan.' });
-        }
-
-        // Pastikan produk ada
-        const [prodRows] = await connection.query('SELECT id_produk, harga, stok FROM Produk WHERE id_produk = ?', [produkId]);
-        if (prodRows.length === 0) {
-            await connection.rollback();
-            connection.release();
-            return res.status(404).json({ message: 'Produk tidak ditemukan.' });
-        }
-
-        // Cek apakah sudah ada item yang sama di keranjang
-        const [existRows] = await connection.query(
-            'SELECT id_keranjang, jumlah FROM Keranjang WHERE id_user = ? AND id_produk = ?',
-            [userId, produkId]
-        );
-
-        if (existRows.length > 0) {
-            // Update qty
-            const newQty = existRows[0].jumlah + jumlah;
-            await connection.query(
-                'UPDATE Keranjang SET jumlah = ?, update_at = NOW() WHERE id_keranjang = ?',
-                [newQty, existRows[0].id_keranjang]
-            );
-        } else {
-            // Insert baru
-            await connection.query(
-                'INSERT INTO Keranjang (id_user, id_produk, jumlah, created_at, update_at) VALUES (?, ?, ?, NOW(), NOW())',
-                [userId, produkId, jumlah]
-            );
-        }
-
-        await connection.commit();
-        connection.release();
-        return res.status(201).json({ message: 'Item ditambahkan ke keranjang.' });
-
-    } catch (error) {
-        console.error('Gagal menambahkan ke keranjang:', error);
-        return res.status(500).json({ message: 'Server error saat menambah ke keranjang.' });
-    } finally {
-        if (connection) connection.release();
-    }
-};
 
 const addOrder = async (req, res) => {
     let connection = null;
     try {
-        const { user_id } = req.body || {};
-        const userId = parseInt(user_id, 10);
+        const userId = parseInt(req.user.userId, 10);
         if (!Number.isInteger(userId) || userId <= 0) {
             return res.status(400).json({ message: 'user_id tidak valid.' });
         }
@@ -152,8 +80,8 @@ const addOrder = async (req, res) => {
 const addPayment = async (req, res) => {
     let connection = null;
     try {
-        const { id_pesanan, method, amount } = req.body || {};
-        const orderId = parseInt(id_pesanan, 10);
+        const {method, amount} = req.body || {};
+        const orderId = parseInt(req.params.id, 10);
         const amt = Number(amount);
         const payMethod = (method || '').toString().trim();
 
@@ -191,7 +119,7 @@ const addPayment = async (req, res) => {
         }
 
         // Simpan pembayaran
-        await connection.query(
+        const [payRes] = await connection.query(
             `INSERT INTO Pembayaran (id_pesanan, method, jumlah_bayar, status_bayar, bukti_bayar, created_at, updated_at) VALUES (?, ?, ?, ?, ?, NOW(), NOW())`,
             [orderId, payMethod, amt, 'berhasil', null] // or a real bukti_bayar string/URL if provided
         );
@@ -213,9 +141,77 @@ const addPayment = async (req, res) => {
         if (connection) connection.release();
     }
 };
+
+const getOrderById = async (req, res) => {
+    let connection = null;
+    try{
+        // Sesuai route map: /api/orders/:id
+        const orderId = parseInt(req.params.id, 10);
+        const userId = parseInt(req.user.userId, 10); // Dari auth middleware
+
+        if (!Number.isInteger(orderId) || orderId <= 0) {
+            return res.status(400).json({ message: 'Order ID tidak valid.' });
+        }
+
+        const pool = await getDbPool();
+        connection = await pool.getConnection();
+
+        // 1. Ambil data pesanan utama
+        // Memastikan user hanya bisa melihat order miliknya
+        const [orderRows] = await connection.query(
+            'SELECT * FROM Pesanan WHERE id_pesanan = ? AND id_user = ?',
+            [orderId, userId]
+        );
+
+        if (orderRows.length === 0) {
+            connection.release();
+            return res.status(404).json({ message: 'Pesanan tidak ditemukan atau bukan milik Anda.' });
+        }
+
+        const orderData = orderRows[0];
+
+        // 2. Ambil item-item pesanan
+        const [itemRows] = await connection.query(
+            `SELECT 
+                pi.id_produk, 
+                pi.jumlah, 
+                pi.harga_satuan, 
+                pi.subtotal,
+                p.nama,
+                p.gambar
+            FROM PesananItem pi
+            JOIN Produk p ON pi.id_produk = p.id_produk
+            WHERE pi.id_pesanan = ?`,
+            [orderId]
+        );
+
+        // 3. Ambil data pembayaran (jika ada)
+        const [paymentRows] = await connection.query(
+            'SELECT * FROM Pembayaran WHERE id_pesanan = ?',
+            [orderId]
+        );
+
+        connection.release();
+
+        // Gabungkan semua data
+        const result = {
+            ...orderData,
+            items: itemRows,
+            pembayaran: paymentRows.length > 0 ? paymentRows[0] : null
+        };
+
+        return res.status(200).json(result);
+
+    }catch(error){
+        console.error('Error getting Order:', error);
+        return res.status(500).json({ message: 'Server Order error', error: error.message });
+    } finally {
+        if (connection) connection.release();
+    }
+}
 //logi ends here
 module.exports = {
-    addToCart,
     addOrder,
     addPayment,
+    getOrderById,
 };
