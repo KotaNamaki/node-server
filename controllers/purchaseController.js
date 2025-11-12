@@ -1,7 +1,11 @@
 const {getDbPool} = require("../database");
+
+
+// Logic Starts here
 const addToCart = async (req, res) => {
+    let connection = null;
     try {
-        let connection = null;
+
         const { user_id, id_produk, qty } = req.body || {};
         const userId = parseInt(user_id, 10);
         const produkId = parseInt(id_produk, 10);
@@ -22,7 +26,7 @@ const addToCart = async (req, res) => {
         await connection.beginTransaction();
 
         // Pastikan user ada
-        const [userRows] = await connection.query('SELECT user_id FROM user WHERE user_id = ?', [userId]);
+        const [userRows] = await connection.query('SELECT user_id FROM User WHERE user_id = ?', [userId]);
         if (userRows.length === 0) {
             await connection.rollback();
             connection.release();
@@ -61,13 +65,12 @@ const addToCart = async (req, res) => {
         await connection.commit();
         connection.release();
         return res.status(201).json({ message: 'Item ditambahkan ke keranjang.' });
+
     } catch (error) {
         console.error('Gagal menambahkan ke keranjang:', error);
-        if (connection) {
-            try { await connection.rollback(); } catch (_) {}
-            connection.release();
-        }
         return res.status(500).json({ message: 'Server error saat menambah ke keranjang.' });
+    } finally {
+        if (connection) connection.release();
     }
 };
 
@@ -85,7 +88,7 @@ const addOrder = async (req, res) => {
         await connection.beginTransaction();
 
         // Pastikan user ada
-        const [userRows] = await connection.query('SELECT user_id FROM user WHERE user_id = ? FOR UPDATE', [userId]);
+        const [userRows] = await connection.query('SELECT user_id FROM User WHERE user_id = ? FOR UPDATE', [userId]);
         if (userRows.length === 0) {
             await connection.rollback();
             connection.release();
@@ -137,12 +140,12 @@ const addOrder = async (req, res) => {
         await connection.query('DELETE FROM Keranjang WHERE id_user = ?', [userId]);
 
         await connection.commit();
-        connection.release();
         return res.status(201).json({ message: 'Pesanan dibuat.', id_pesanan: orderId, total_harga: total, status: 'menunggu_pembayaran' });
     } catch (error) {
         console.error('Gagal membuat pesanan:', error);
-
         return res.status(500).json({ message: 'Server error saat membuat pesanan.' });
+    } finally {
+        if (connection) connection.release();
     }
 };
 
@@ -176,7 +179,7 @@ const addPayment = async (req, res) => {
             return res.status(404).json({ message: 'Pesanan tidak ditemukan.' });
         }
         const order = orderRows[0];
-        if (order.status !== 'menunggu_pembayaran') {
+        if (order.status_pesanan !== 'menunggu_pembayaran') {
             await connection.rollback();
             connection.release();
             return res.status(400).json({ message: 'Pesanan bukan dalam status menunggu_pembayaran.' });
@@ -188,27 +191,29 @@ const addPayment = async (req, res) => {
         }
 
         // Simpan pembayaran
-        const [payRes] = await connection.query(
-            'INSERT INTO Pembayaran (id_pesanan, method, jumlah_bayar, status_bayar, bukti_bayar, created_at, updated_at) VALUES (?, ?, ?, ?, NOW(), NOW(), NOW())',
-            [orderId, payMethod, amt, 'berhasil']
+        await connection.query(
+            `INSERT INTO Pembayaran (id_pesanan, method, jumlah_bayar, status_bayar, bukti_bayar, created_at, updated_at) VALUES (?, ?, ?, ?, ?, NOW(), NOW())`,
+            [orderId, payMethod, amt, 'berhasil', null] // or a real bukti_bayar string/URL if provided
         );
 
         // Update pesanan
         await connection.query(
-            "UPDATE Pesanan SET status_pesanan = 'dibayar', updated_at = NOW() WHERE id_pesanan = ?",
+            `UPDATE Pesanan SET status_pesanan = 'dibayar', updated_at = NOW() WHERE id_pesanan = ?`,
             [orderId]
         );
 
         await connection.commit();
-        connection.release();
         return res.status(201).json({ message: 'Pembayaran berhasil.', id_pembayaran: payRes.insertId, id_pesanan: orderId, status: 'dibayar' });
+
     } catch (error) {
         console.error('Gagal memproses pembayaran:', error);
         return res.status(500).json({ message: 'Server error saat memproses pembayaran.' });
     }
+    finally {
+        if (connection) connection.release();
+    }
 };
-
-
+//logi ends here
 module.exports = {
     addToCart,
     addOrder,

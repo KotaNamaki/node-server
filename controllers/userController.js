@@ -1,6 +1,7 @@
 const { getDbPool } = require('../database');
 const bcrypt = require("bcryptjs");
-const jwt = process.env.JWT_SECRET;
+const jwt = require('jsonwebtoken');
+const JWT_SECRET = process.env.JWT_SECRET;
 
 
 // Logic starts here
@@ -8,7 +9,7 @@ const getUserById = async (req, res) => {
     try {
         const { id } = req.params;
         const db = await getDbPool();
-        const query= 'SELECT user_id, nama, email, no_hp, role FROM user WHERE user_id = ?';
+        const query= 'SELECT user_id, nama, email, no_hp, role FROM User WHERE user_id = ?';
         const [rows] = await db.query(query, [id]);
         if (rows.length === 0) {
             return res.status(404).json({ message: 'User not found.' });
@@ -24,7 +25,7 @@ const getUserByEmail = async (req, res) => {
     try {
         const { email } = req.params;
         const db = await getDbPool();
-        const query = 'SELECT user_id, nama, email, no_hp, role FROM user WHERE email = ?';
+        const query = 'SELECT user_id, nama, email, no_hp, role FROM User WHERE email = ?';
         const [rows] = await db.query(query, [email]);
         if (rows.length === 0) {
             return res.status(404).json({ message: 'User with that email not found.' });
@@ -41,7 +42,7 @@ const getUser = async (req, res) => {
         const db = await getDbPool();
         const query = `
         SELECT user_id, nama, email, no_hp, role
-        FROM user`;
+        FROM User`;
         const [rows] = await db.query(query);
         res.json(rows);
     } catch (error) {
@@ -91,7 +92,7 @@ const updateUser = async (req, res) => {
         const db = await getDbPool();
 
         // Ensure user exists
-        const [existing] = await db.query('SELECT user_id FROM user WHERE user_id = ?', [id]);
+        const [existing] = await db.query('SELECT user_id FROM User WHERE user_id = ?', [id]);
         if (existing.length === 0) {
             return res.status(404).json({ message: 'User not found.' });
         }
@@ -104,11 +105,11 @@ const updateUser = async (req, res) => {
             }
         }
 
-        const sql = `UPDATE user SET ${fields.join(', ')} WHERE user_id = ?`;
+        const sql = `UPDATE User SET ${fields.join(', ')} WHERE user_id = ?`;
         await db.query(sql, [...values, id]);
 
         // Return the updated user (omit password)
-        const [rows] = await db.query('SELECT user_id, nama, email, no_hp, role FROM user WHERE user_id = ?', [id]);
+        const [rows] = await db.query('SELECT user_id, nama, email, no_hp, role FROM User WHERE user_id = ?', [id]);
         return res.json({ message: 'User updated successfully!', user: rows[0] });
     } catch (error){
         console.error('Failed to update user:', error);
@@ -125,7 +126,7 @@ const userLogin = async (req, res) => {
 
         const db = await getDbPool();
         // Fetching from 'user' table and selecting the hashed password column
-        const [users] = await db.query('SELECT * FROM user WHERE email = ?', [email]);
+        const [users] = await db.query('SELECT * FROM User WHERE email = ?', [email]);
         if (users.length === 0) {
             return res.status(401).json({ message: 'Invalid credentials.' });
         }
@@ -161,7 +162,7 @@ const userRegister = async (req, res) => {
         }
         const db = await getDbPool();
         // Check if user already exists
-        const [existingUsers] = await db.query('SELECT user_id FROM user WHERE email = ?', [email]);
+        const [existingUsers] = await db.query('SELECT user_id FROM User WHERE email = ?', [email]);
         if (existingUsers.length > 0) {
             return res.status(409).json({ message: 'Akun dengan email ini sudah ada.' });
         }
@@ -172,7 +173,7 @@ const userRegister = async (req, res) => {
 
         // Insert the new user record
         const [result] = await db.query(
-            'INSERT INTO user (nama, email, password, no_hp, role) VALUES (?, ?, ?, ?, ?)',
+            'INSERT INTO User (nama, email, password, no_hp, role) VALUES (?, ?, ?, ?, ?)',
             [nama, email, passwordHash, no_hp, 'customer'] // Default role to 'customer'
         );
 
