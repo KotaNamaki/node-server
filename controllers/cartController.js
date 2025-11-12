@@ -1,4 +1,4 @@
-const {getDbPool} = require("/database")
+const {getDbPool} = require("../database")
 
 const addToCart = async (req, res) => {
     let connection = null;
