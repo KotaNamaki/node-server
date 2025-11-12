@@ -156,7 +156,7 @@ const getCart = async (req, res) => {
             [userId]
         );
 
-        const total = items.reduce((sum, item) => sum + Number(item.total), 0);
+        const total = items.reduce((sum, item) => sum + Number(item.subtotal), 0);
 
         connection.release();
         return res.status(200).json({items: items, total_harga: total});

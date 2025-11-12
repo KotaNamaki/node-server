@@ -6,11 +6,12 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // --- Middleware ---
-app.use(cors({
-    origin: ['https://motodiv.store', 'https://motodiv.store/api', 'https://admin.motodiv.store'],
-    methods: ['GET','POST','PATCH','DELETE'],
-    credentials: true
-}));
+//app.use(cors({
+//    origin: ['https://motodiv.store', 'localhost', 'https://admin.motodiv.store'],
+//    methods: ['GET','POST','PATCH','DELETE'],
+//    credentials: true
+//}));
+app.use(cors());
 app.use(express.json());
 
 // --- Memuat Routes ---
