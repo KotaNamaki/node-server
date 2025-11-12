@@ -2,7 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const orderController = require('../controllers/orderController');
-const { authReq } = require('/middleware/authMiddleWare');
+const { authReq } = require('../middleware/authMiddleWare');
 
 // Semua route order memerlukan login
 router.use(authReq);
