@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Tester</title>
+    <style>
+        body { font-family: sans-serif; display: flex; gap: 20px; }
+        section { border: 1px solid #ccc; padding: 10px; min-width: 300px; }
+        fieldset { margin-bottom: 10px; }
+        legend { font-weight: bold; }
+        input, select { width: 95%; margin-bottom: 5px; padding: 5px; }
+        button { width: 100%; padding: 8px; cursor: pointer; }
+        #response-output {
+            white-space: pre-line;
+            background-color: #f4f4f4;
+            border: 1px solid #ddd;
+            padding: 10px;
+            min-height: 200px;
+            max-width: 500px;
+            flex-grow: 1;
+        }
+    </style>
+</head>
+<body>
+
+<section>
+    <h2>Alur E-Commerce</h2>
+
+    <fieldset>
+        <legend>1. Auth</legend>
+        <input type="email" id="reg-email" placeholder="Email (cth: user@mail.com)">
+        <input type="text" id="reg-nama" placeholder="Nama (cth: User Biasa)">
+        <input type="text" id="reg-hp" placeholder="No HP (cth: 08123)">
+        <input type="password" id="reg-pass" placeholder="Password">
+        <button id="btn-register">Register</button>
+        <hr>
+        <input type="email" id="login-email" placeholder="Email (user@mail.com)">
+        <input type="password" id="login-pass" placeholder="Password">
+        <button id="btn-login">Login (Dapat Token)</button>
+    </fieldset>
+
+    <fieldset>
+        <legend>2. Products (Publik)</legend>
+        <button id="btn-get-products">Get All Products</button>
+    </fieldset>
+
+    <fieldset>
+        <legend>3. Cart (Perlu Login)</legend>
+        <input type="number" id="cart-prod-id" placeholder="ID Produk (cth: 1)">
+        <input type="number" id="cart-qty" placeholder="Qty (cth: 2)" value="1">
+        <button id="btn-add-cart">Add to Cart</button>
+        <hr>
+        <button id="btn-get-cart">Get Cart</button>
+    </fieldset>
+
+    <fieldset>
+        <legend>4. Orders (Perlu Login)</legend>
+        <button id="btn-checkout">Create Order (Checkout)</button>
+        <hr>
+        <hr>
+        <input type="number" id="order-id" placeholder="ID Pesanan (dari checkout)">
+        <button id="btn-get-order-detail">Get Order Detail</button>
+        <hr>
+        <select id="pay-method">
+            <option value="">-- Pilih Metode --</option>
+            <option value="MOBILE_BANKING">MOBILE BANKING</option>
+            <option value="DANA">DANA</option>
+            <option value="QRIS">QRIS</option>
+            <option value="VA">VA</option>
+        </select>
+        <input type="number" id="pay-amount" placeholder="Amount (cth: 50000)">
+        <button id="btn-add-payment">Add Payment</button>
+    </fieldset>
+
+</section>
+
+<section>
+    <h2>Server Response</h2>
+    <pre id="response-output">...</pre>
+</section>
+
+<script>
+    // --- Konfigurasi ---
+    const baseUrl = 'http://localhost:3000/api';
+    let jwtToken = null; // Token disimpan di sini setelah login
+
+    // --- Elemen DOM ---
+    const output = document.getElementById('response-output');
+
+    // --- Helper ---
+    const showResponse = (data) => {
+        output.textContent = JSON.stringify(data, null, 2);
+    };
+    const getHeaders = (needsAuth = false) => {
+        const headers = { 'Content-Type': 'application/json' };
+        if (needsAuth) {
+            if (!jwtToken) {
+                alert('Anda harus Login terlebih dahulu!');
+                throw new Error('Token not found');
+            }
+            headers['Authorization'] = `Bearer ${jwtToken}`;
+        }
+        return headers;
+    };
+
+    // --- Event Listeners ---
+    document.addEventListener('DOMContentLoaded', () => {
+
+        // 1. Register
+        document.getElementById('btn-register').onclick = async () => {
+            const body = {
+                email: document.getElementById('reg-email').value,
+                nama: document.getElementById('reg-nama').value,
+                no_hp: document.getElementById('reg-hp').value,
+                password: document.getElementById('reg-pass').value
+            };
+            try {
+                const res = await fetch(`${baseUrl}/auth/register`, {
+                    method: 'POST',
+                    headers: getHeaders(),
+                    body: JSON.stringify(body)
+                });
+                showResponse(await res.json());
+            } catch (e) { showResponse({ error: e.message }); }
+        };
+
+        // 2. Login
+        document.getElementById('btn-login').onclick = async () => {
+            const body = {
+                email: document.getElementById('login-email').value,
+                password: document.getElementById('login-pass').value
+            };
+            try {
+                const res = await fetch(`${baseUrl}/auth/login`, {
+                    method: 'POST',
+                    headers: getHeaders(),
+                    body: JSON.stringify(body)
+                });
+                const data = await res.json();
+                if (res.ok && data.token) {
+                    jwtToken = data.token;
+                    showResponse({ message: "LOGIN BERHASIL. Token disimpan.", token: data.token });
+                } else {
+                    showResponse(data);
+                }
+            } catch (e) { showResponse({ error: e.message }); }
+        };
+
+        // 3. Get Products
+        document.getElementById('btn-get-products').onclick = async () => {
+            try {
+                const res = await fetch(`${baseUrl}/products/search`, {
+                    method: 'GET'
+                });
+                showResponse(await res.json());
+            } catch (e) { showResponse({ error: e.message }); }
+        };
+
+        // 4. Add to Cart (Protected)
+        document.getElementById('btn-add-cart').onclick = async () => {
+            const body = {
+                id_produk: parseInt(document.getElementById('cart-prod-id').value, 10),
+                qty: parseInt(document.getElementById('cart-qty').value, 10)
+            };
+            try {
+                const res = await fetch(`${baseUrl}/cart/items`, {
+                    method: 'POST',
+                    headers: getHeaders(true),
+                    body: JSON.stringify(body)
+                });
+                showResponse(await res.json());
+            } catch (e) { showResponse({ error: e.message }); }
+        };
+
+        // 5. Get Cart (Protected)
+        document.getElementById('btn-get-cart').onclick = async () => {
+            try {
+                const res = await fetch(`${baseUrl}/cart`, {
+                    method: 'GET',
+                    headers: getHeaders(true)
+                });
+                showResponse(await res.json());
+            } catch (e) { showResponse({ error: e.message }); }
+        };
+
+        // 6. Create Order (Protected)
+        document.getElementById('btn-checkout').onclick = async () => {
+            try {
+                const res = await fetch(`${baseUrl}/orders`, {
+                    method: 'POST',
+                    headers: getHeaders(true)
+                });
+                const data = await res.json();
+                if (res.ok && data.id_pesanan) {
+                    document.getElementById('order-id').value = data.id_pesanan;
+                }
+                showResponse(data);
+            } catch (e) { showResponse({ error: e.message }); }
+        };
+
+        // 6b. Get All Orders (Protected)
+        // 6c. Get Order Detail by ID (Protected)
+        document.getElementById('btn-get-order-detail').onclick = async () => {
+            const orderid = document.getElementById('order-id').value;
+            if (!orderid) {
+                alert('Silakan masukkan Order ID');
+                return;
+            }
+            try {
+                const res = await fetch(`${baseUrl}/orders/get/${orderid}`, {
+                    method: 'GET',
+                    headers: getHeaders(true)
+                });
+                showResponse(await res.json());
+            } catch (e) { showResponse({ error: e.message }); }
+        };
+
+        // 7. Add Payment (Protected)
+        document.getElementById('btn-add-payment').onclick = async () => {
+            const button = document.getElementById('btn-add-payment');
+            const orderId = document.getElementById('order-id').value;
+            const method = document.getElementById('pay-method').value;
+
+            if (!orderId) {
+                alert('ID Pesanan harus diisi (didapat dari checkout)');
+                return;
+            }
+            if (!method) {
+                alert('Metode pembayaran harus dipilih');
+                return;
+            }
+
+            const body = {
+                method: method,
+                amount: parseFloat(document.getElementById('pay-amount').value)
+            };
+
+            try {
+                button.disabled = true;
+                button.textContent = "Loading...";
+
+                const res = await fetch(`${baseUrl}/orders/${orderId}/payments`, {
+                    method: 'POST',
+                    headers: getHeaders(true),
+                    body: JSON.stringify(body)
+                });
+                showResponse(await res.json());
+            } catch (e) {
+                showResponse({ error: e.message });
+            } finally {
+                button.disabled = false;
+                button.textContent = "Add Payment";
+            }
+        };
+
+    });
+</script>
+</body>
+</html>
