@@ -99,7 +99,7 @@ const updateUser = async (req, res) => {
 
         // If email is being updated, ensure it is not taken by another user
         if (email !== undefined) {
-            const [emailTaken] = await db.query('SELECT user_id FROM user WHERE email = ? AND user_id <> ?', [email, id]);
+            const [emailTaken] = await db.query('SELECT user_id FROM User WHERE email = ? AND user_id <> ?', [email, id]);
             if (emailTaken.length > 0) {
                 return res.status(409).json({ message: 'Email is already in use by another account.' });
             }
