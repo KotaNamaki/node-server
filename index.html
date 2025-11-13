@@ -3,65 +3,147 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>API Tester</title>
+    <title>API Tester Lengkap</title>
     <style>
-        body { font-family: sans-serif; display: flex; gap: 20px; }
-        section { border: 1px solid #ccc; padding: 10px; min-width: 300px; }
-        fieldset { margin-bottom: 10px; }
-        legend { font-weight: bold; }
-        input, select { width: 95%; margin-bottom: 5px; padding: 5px; }
-        button { width: 100%; padding: 8px; cursor: pointer; }
-        #response-output {
-            white-space: pre-line;
-            background-color: #f4f4f4;
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            padding: 10px;
+            background-color: #f9f9f9;
+        }
+        section {
             border: 1px solid #ddd;
             padding: 10px;
-            min-height: 200px;
-            max-width: 500px;
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            flex-basis: 300px; /* Lebar dasar untuk setiap kolom */
             flex-grow: 1;
+        }
+        h2 {
+            margin-top: 0;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 8px;
+            color: #333;
+        }
+        fieldset {
+            margin-bottom: 12px;
+            border: 1px solid #eee;
+            border-radius: 6px;
+            padding: 10px;
+        }
+        legend {
+            font-weight: bold;
+            color: #555;
+            padding: 0 5px;
+        }
+        input, select, button {
+            width: 100%;
+            margin-bottom: 8px;
+            padding: 10px;
+            box-sizing: border-box; /* Penting untuk padding */
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            cursor: pointer;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+        button:hover { background-color: #0056b3; }
+        button.delete { background-color: #dc3545; }
+        button.delete:hover { background-color: #c82333; }
+        button.update { background-color: #ffc107; color: #212529; }
+        button.update:hover { background-color: #e0a800; }
+
+        #response-output {
+            white-space: pre-wrap; /* Agar JSON rapi */
+            background-color: #282c34; /* Dark mode */
+            color: #abb2bf;
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 6px;
+            min-height: 300px;
+            font-family: "Courier New", Courier, monospace;
+            font-size: 14px;
+        }
+        #user-info {
+            background: #fff8e1;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #ffe58f;
+            white-space: pre-wrap;
+            font-family: "Courier New", Courier, monospace;
+            font-size: 13px;
+            color: #66562b;
         }
     </style>
 </head>
 <body>
 
+<!-- KOLOM 1: AUTENTIKASI & INFO -->
 <section>
-    <h2>Alur E-Commerce</h2>
+    <h2>1. Auth & Info</h2>
 
     <fieldset>
-        <legend>1. Auth</legend>
+        <legend>Register</legend>
         <input type="email" id="reg-email" placeholder="Email (cth: user@mail.com)">
         <input type="text" id="reg-nama" placeholder="Nama (cth: User Biasa)">
         <input type="text" id="reg-hp" placeholder="No HP (cth: 08123)">
         <input type="password" id="reg-pass" placeholder="Password">
+        <!-- BARU: Tambahkan dropdown untuk role -->
+        <select id="reg-role">
+            <option value="customer">Customer</option>
+            <option value="admin">Admin</option>
+        </select>
         <button id="btn-register">Register</button>
-        <hr>
+    </fieldset>
+
+    <fieldset>
+        <legend>Login</legend>
         <input type="email" id="login-email" placeholder="Email (user@mail.com)">
         <input type="password" id="login-pass" placeholder="Password">
         <button id="btn-login">Login (Dapat Token)</button>
     </fieldset>
 
     <fieldset>
-        <legend>2. Products (Publik)</legend>
+        <legend>User Info (Setelah Login)</legend>
+        <pre id="user-info">Login untuk melihat info...</pre>
+    </fieldset>
+</section>
+
+<!-- KOLOM 2: CUSTOMER -->
+<section>
+    <h2>2. Alur Customer</h2>
+
+    <fieldset>
+        <legend>Products (Publik)</legend>
         <button id="btn-get-products">Get All Products</button>
     </fieldset>
 
     <fieldset>
-        <legend>3. Cart (Perlu Login)</legend>
+        <legend>Cart (Perlu Login)</legend>
         <input type="number" id="cart-prod-id" placeholder="ID Produk (cth: 1)">
         <input type="number" id="cart-qty" placeholder="Qty (cth: 2)" value="1">
         <button id="btn-add-cart">Add to Cart</button>
-        <hr>
+        <button id="btn-cart-update" class="update">Update Qty</button>
+        <button id="btn-cart-delete" class="delete">Delete Item</button>
+        <hr style="margin: 10px 0; border: 0; border-top: 1px solid #eee;">
         <button id="btn-get-cart">Get Cart</button>
     </fieldset>
 
     <fieldset>
-        <legend>4. Orders (Perlu Login)</legend>
+        <legend>Orders (Perlu Login)</legend>
         <button id="btn-checkout">Create Order (Checkout)</button>
-        <hr>
-        <hr>
+        <hr style="margin: 10px 0; border: 0; border-top: 1px solid #eee;">
         <input type="number" id="order-id" placeholder="ID Pesanan (dari checkout)">
         <button id="btn-get-order-detail">Get Order Detail</button>
-        <hr>
+        <hr style="margin: 10px 0; border: 0; border-top: 1px solid #eee;">
         <select id="pay-method">
             <option value="">-- Pilih Metode --</option>
             <option value="MOBILE_BANKING">MOBILE BANKING</option>
@@ -72,31 +154,62 @@
         <input type="number" id="pay-amount" placeholder="Amount (cth: 50000)">
         <button id="btn-add-payment">Add Payment</button>
     </fieldset>
-
 </section>
 
+<!-- KOLOM 3: ADMIN & USER -->
 <section>
+    <h2>3. Admin & User Actions</h2>
+    <fieldset>
+        <legend>Admin Panel (Perlu Token Admin)</legend>
+        <input type="text" id="admin-prod-nama" placeholder="Nama Produk">
+        <input type="text" id="admin-prod-kategori" placeholder="Kategori">
+        <input type="text" id="admin-prod-desk" placeholder="Deskripsi">
+        <input type="number" id="admin-prod-harga" placeholder="Harga">
+        <input type="number" id="admin-prod-stok" placeholder="Stok">
+        <button id="btn-admin-add-prod">Add Product</button>
+        <hr style="margin: 10px 0; border: 0; border-top: 1px solid #eee;">
+        <input type="number" id="admin-prod-id" placeholder="ID Produk (utk Update/Delete)">
+        <button id="btn-admin-update-prod" class="update">Update Product</button>
+        <button id="btn-admin-delete-prod" class="delete">Delete Product</button>
+    </fieldset>
+
+    <fieldset>
+        <legend>User Panel (Publik)</legend>
+        <input type="number" id="user-id" placeholder="User ID (cth: 1)">
+        <button id="btn-user-get">Get User by ID</button>
+        <hr style="margin: 10px 0; border: 0; border-top: 1px solid #eee;">
+        <input type="text" id="user-nama" placeholder="Nama Baru">
+        <input type="text" id="user-email" placeholder="Email Baru">
+        <button id="btn-user-update" class="update">Update User</button>
+    </fieldset>
+</section>
+
+<!-- KOLOM 4: RESPONSE -->
+<section style="flex-grow: 2; flex-basis: 400px;">
     <h2>Server Response</h2>
     <pre id="response-output">...</pre>
 </section>
 
 <script>
     // --- Konfigurasi ---
-    const baseUrl = 'http://localhost:3000/api';
+    const baseUrl = 'http://localhost:3000/api'; // Pastikan ini alamat server Anda
     let jwtToken = null; // Token disimpan di sini setelah login
 
     // --- Elemen DOM ---
     const output = document.getElementById('response-output');
+    const userInfoEl = document.getElementById('user-info');
 
     // --- Helper ---
     const showResponse = (data) => {
         output.textContent = JSON.stringify(data, null, 2);
     };
+
     const getHeaders = (needsAuth = false) => {
         const headers = { 'Content-Type': 'application/json' };
         if (needsAuth) {
             if (!jwtToken) {
-                alert('Anda harus Login terlebih dahulu!');
+                // Modifikasi: Jangan gunakan alert
+                showResponse({ error: "Anda harus Login terlebih dahulu!", message: "Token not found" });
                 throw new Error('Token not found');
             }
             headers['Authorization'] = `Bearer ${jwtToken}`;
@@ -104,16 +217,26 @@
         return headers;
     };
 
+    // Helper untuk decode JWT (hanya untuk tampilan, tidak aman)
+    const decodeToken = (token) => {
+        try {
+            return JSON.parse(atob(token.split('.')[1]));
+        } catch (e) {
+            return null;
+        }
+    };
+
     // --- Event Listeners ---
     document.addEventListener('DOMContentLoaded', () => {
 
-        // 1. Register
+        // --- 1. AUTH ---
         document.getElementById('btn-register').onclick = async () => {
             const body = {
                 email: document.getElementById('reg-email').value,
                 nama: document.getElementById('reg-nama').value,
                 no_hp: document.getElementById('reg-hp').value,
-                password: document.getElementById('reg-pass').value
+                password: document.getElementById('reg-pass').value,
+                role: document.getElementById('reg-role').value // BARU: Ambil nilai role
             };
             try {
                 const res = await fetch(`${baseUrl}/auth/register`, {
@@ -125,7 +248,6 @@
             } catch (e) { showResponse({ error: e.message }); }
         };
 
-        // 2. Login
         document.getElementById('btn-login').onclick = async () => {
             const body = {
                 email: document.getElementById('login-email').value,
@@ -140,14 +262,27 @@
                 const data = await res.json();
                 if (res.ok && data.token) {
                     jwtToken = data.token;
-                    showResponse({ message: "LOGIN BERHASIL. Token disimpan.", token: data.token });
+                    const userInfo = decodeToken(jwtToken);
+                    // Tampilkan info user
+                    userInfoEl.textContent =
+                        `Token: ${jwtToken.substring(0, 20)}...\n` +
+                        `User ID: ${userInfo.userId}\n` +
+                        `Email: ${userInfo.email}\n` +
+                        `Role: ${userInfo.role.toUpperCase()}`; // PENTING
+                    showResponse({ message: "LOGIN BERHASIL. Token disimpan.", userInfo });
                 } else {
+                    jwtToken = null;
+                    userInfoEl.textContent = "Login gagal atau token tidak diterima.";
                     showResponse(data);
                 }
-            } catch (e) { showResponse({ error: e.message }); }
+            } catch (e) {
+                jwtToken = null;
+                userInfoEl.textContent = "Error saat login.";
+                showResponse({ error: e.message });
+            }
         };
 
-        // 3. Get Products
+        // --- 2. CUSTOMER: PRODUCTS ---
         document.getElementById('btn-get-products').onclick = async () => {
             try {
                 const res = await fetch(`${baseUrl}/products/search`, {
@@ -157,7 +292,7 @@
             } catch (e) { showResponse({ error: e.message }); }
         };
 
-        // 4. Add to Cart (Protected)
+        // --- 2. CUSTOMER: CART ---
         document.getElementById('btn-add-cart').onclick = async () => {
             const body = {
                 id_produk: parseInt(document.getElementById('cart-prod-id').value, 10),
@@ -170,10 +305,43 @@
                     body: JSON.stringify(body)
                 });
                 showResponse(await res.json());
-            } catch (e) { showResponse({ error: e.message }); }
+            } catch (e) { /* Error (spt token) sudah ditangani di getHeaders */ }
         };
 
-        // 5. Get Cart (Protected)
+        document.getElementById('btn-cart-update').onclick = async () => {
+            const prodId = document.getElementById('cart-prod-id').value;
+            const body = {
+                qty: parseInt(document.getElementById('cart-qty').value, 10)
+            };
+            if (!prodId) {
+                showResponse({ error: "Masukkan ID Produk di field keranjang" });
+                return;
+            }
+            try {
+                const res = await fetch(`${baseUrl}/cart/items/${prodId}`, {
+                    method: 'PATCH',
+                    headers: getHeaders(true),
+                    body: JSON.stringify(body)
+                });
+                showResponse(await res.json());
+            } catch (e) { /* Error (spt token) sudah ditangani di getHeaders */ }
+        };
+
+        document.getElementById('btn-cart-delete').onclick = async () => {
+            const prodId = document.getElementById('cart-prod-id').value;
+            if (!prodId) {
+                showResponse({ error: "Masukkan ID Produk di field keranjang" });
+                return;
+            }
+            try {
+                const res = await fetch(`${baseUrl}/cart/items/${prodId}`, {
+                    method: 'DELETE',
+                    headers: getHeaders(true)
+                });
+                showResponse(await res.json());
+            } catch (e) { /* Error (spt token) sudah ditangani di getHeaders */ }
+        };
+
         document.getElementById('btn-get-cart').onclick = async () => {
             try {
                 const res = await fetch(`${baseUrl}/cart`, {
@@ -181,10 +349,10 @@
                     headers: getHeaders(true)
                 });
                 showResponse(await res.json());
-            } catch (e) { showResponse({ error: e.message }); }
+            } catch (e) { /* Error (spt token) sudah ditangani di getHeaders */ }
         };
 
-        // 6. Create Order (Protected)
+        // --- 2. CUSTOMER: ORDERS ---
         document.getElementById('btn-checkout').onclick = async () => {
             try {
                 const res = await fetch(`${baseUrl}/orders`, {
@@ -196,15 +364,13 @@
                     document.getElementById('order-id').value = data.id_pesanan;
                 }
                 showResponse(data);
-            } catch (e) { showResponse({ error: e.message }); }
+            } catch (e) { /* Error (spt token) sudah ditangani di getHeaders */ }
         };
 
-        // 6b. Get All Orders (Protected)
-        // 6c. Get Order Detail by ID (Protected)
         document.getElementById('btn-get-order-detail').onclick = async () => {
             const orderid = document.getElementById('order-id').value;
             if (!orderid) {
-                alert('Silakan masukkan Order ID');
+                showResponse({ error: 'Silakan masukkan Order ID' });
                 return;
             }
             try {
@@ -213,45 +379,132 @@
                     headers: getHeaders(true)
                 });
                 showResponse(await res.json());
-            } catch (e) { showResponse({ error: e.message }); }
+            } catch (e) { /* Error (spt token) sudah ditangani di getHeaders */ }
         };
 
-        // 7. Add Payment (Protected)
         document.getElementById('btn-add-payment').onclick = async () => {
-            const button = document.getElementById('btn-add-payment');
             const orderId = document.getElementById('order-id').value;
             const method = document.getElementById('pay-method').value;
-
             if (!orderId) {
-                alert('ID Pesanan harus diisi (didapat dari checkout)');
+                showResponse({ error: 'ID Pesanan harus diisi (didapat dari checkout)' });
                 return;
             }
             if (!method) {
-                alert('Metode pembayaran harus dipilih');
+                showResponse({ error: 'Metode pembayaran harus dipilih' });
                 return;
             }
-
             const body = {
                 method: method,
                 amount: parseFloat(document.getElementById('pay-amount').value)
             };
-
             try {
-                button.disabled = true;
-                button.textContent = "Loading...";
-
                 const res = await fetch(`${baseUrl}/orders/${orderId}/payments`, {
                     method: 'POST',
                     headers: getHeaders(true),
                     body: JSON.stringify(body)
                 });
                 showResponse(await res.json());
-            } catch (e) {
-                showResponse({ error: e.message });
-            } finally {
-                button.disabled = false;
-                button.textContent = "Add Payment";
+            } catch (e) { /* Error (spt token) sudah ditangani di getHeaders */ }
+        };
+
+        // --- 3. ADMIN ---
+        document.getElementById('btn-admin-add-prod').onclick = async () => {
+            const body = {
+                nama: document.getElementById('admin-prod-nama').value,
+                kategori: document.getElementById('admin-prod-kategori').value,
+                deskripsi: document.getElementById('admin-prod-desk').value,
+                harga: parseFloat(document.getElementById('admin-prod-harga').value),
+                stok: parseInt(document.getElementById('admin-prod-stok').value, 10)
+            };
+            try {
+                const res = await fetch(`${baseUrl}/products`, {
+                    method: 'POST',
+                    headers: getHeaders(true), // Perlu auth
+                    body: JSON.stringify(body)
+                });
+                showResponse(await res.json());
+            } catch (e) { /* Error (spt token) sudah ditangani di getHeaders */ }
+        };
+
+        document.getElementById('btn-admin-update-prod').onclick = async () => {
+            const prodId = document.getElementById('admin-prod-id').value;
+            if (!prodId) {
+                showResponse({ error: "Masukkan ID Produk di panel Admin" });
+                return;
             }
+            // Kirim field yang diisi saja
+            const body = {};
+            const nama = document.getElementById('admin-prod-nama').value;
+            const deskripsi = document.getElementById('admin-prod-desk').value;
+            const harga = document.getElementById('admin-prod-harga').value;
+            const stok = document.getElementById('admin-prod-stok').value;
+
+            if (nama) body.nama = nama;
+            if (deskripsi) body.deskripsi = deskripsi;
+            if (harga) body.harga = parseFloat(harga);
+            if (stok) body.stok = parseInt(stok, 10);
+
+            try {
+                const res = await fetch(`${baseUrl}/products/${prodId}`, {
+                    method: 'PATCH',
+                    headers: getHeaders(true), // Perlu auth
+                    body: JSON.stringify(body)
+                });
+                showResponse(await res.json());
+            } catch (e) { /* Error (spt token) sudah ditangani di getHeaders */ }
+        };
+
+        document.getElementById('btn-admin-delete-prod').onclick = async () => {
+            const prodId = document.getElementById('admin-prod-id').value;
+            if (!prodId) {
+                showResponse({ error: "Masukkan ID Produk di panel Admin" });
+                return;
+            }
+            try {
+                const res = await fetch(`${baseUrl}/products/${prodId}`, {
+                    method: 'DELETE',
+                    headers: getHeaders(true) // Perlu auth
+                });
+                showResponse(await res.json());
+            } catch (e) { /* Error (spt token) sudah ditangani di getHeaders */ }
+        };
+
+        // --- 3. USER ---
+        document.getElementById('btn-user-get').onclick = async () => {
+            const userId = document.getElementById('user-id').value;
+            if (!userId) {
+                showResponse({ error: "Masukkan User ID" });
+                return;
+            }
+            try {
+                const res = await fetch(`${baseUrl}/users/${userId}`, {
+                    method: 'GET',
+                    // headers: getHeaders(true) // API Anda tidak melindungi ini
+                });
+                showResponse(await res.json());
+            } catch (e) { showResponse({ error: e.message }); }
+        };
+
+        document.getElementById('btn-user-update').onclick = async () => {
+            const userId = document.getElementById('user-id').value;
+            if (!userId) {
+                showResponse({ error: "Masukkan User ID" });
+                return;
+            }
+            const body = {};
+            const nama = document.getElementById('user-nama').value;
+            const email = document.getElementById('user-email').value;
+            if (nama) body.nama = nama;
+            if (email) body.email = email;
+
+            try {
+                const res = await fetch(`${baseUrl}/users/update/${userId}`, {
+                    method: 'PATCH',
+                    headers: getHeaders(), // API Anda tidak melindungi ini
+                    body: JSON.stringify(body)
+                });
+                showResponse(await res.json());
+            } catch (e) { showResponse({ error: e.message }); }
         };
 
     });

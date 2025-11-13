@@ -23,4 +23,15 @@ const authReq = (req, res, next) => {
     }
 };
 
-module.exports = { authReq };
+const adminReq = (req, res, next) => {
+    if (!req.user) {
+        return res.status(401).json({ message: 'Otentikasi diperlukan' });
+    }
+    if (req.user.role !== 'admin') {
+        return res.status(401).json({ message: 'Akses ditolak, fiture ini hanya bisa digunakan oleh admin' });
+    }
+    next();
+};
+
+
+module.exports = { authReq, adminReq };

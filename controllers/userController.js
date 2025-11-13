@@ -156,10 +156,14 @@ const userLogin = async (req, res) => {
 const userRegister = async (req, res) => {
     try {
         // Now expecting 'nama' and 'no_hp' from the request body
-        const { nama, email, password, no_hp } = req.body;
+        const { nama, email, password, no_hp, role = 'customer' } = req.body;
         if (!email || !password || !nama || !no_hp) {
             return res.status(400).json({ message: 'Nama, email, password, dan no_hp wajib diisi.' });
         }
+
+        const validRoles = ['customer', 'admin'];
+        if (!validRoles.includes(role)) {}
+
         const db = await getDbPool();
         // Check if user already exists
         const [existingUsers] = await db.query('SELECT user_id FROM User WHERE email = ?', [email]);
@@ -174,7 +178,7 @@ const userRegister = async (req, res) => {
         // Insert the new user record
         const [result] = await db.query(
             'INSERT INTO User (nama, email, password, no_hp, role) VALUES (?, ?, ?, ?, ?)',
-            [nama, email, passwordHash, no_hp, 'customer'] // Default role to 'customer'
+            [nama, email, passwordHash, no_hp, role] // Default role to 'customer'
         );
 
         res.status(201).json({ message: 'User registered successfully!', userId: result.insertId });
