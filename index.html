@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>API Tester Lengkap</title>
+    <title>API Tester Lengkap (v2)</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -124,6 +124,10 @@
     <fieldset>
         <legend>Products (Publik)</legend>
         <button id="btn-get-products">Get All Products</button>
+        <hr style="margin: 10px 0; border: 0; border-top: 1px solid #eee;">
+        <!-- BARU: Tombol untuk Get Product by ID -->
+        <input type="number" id="prod-id" placeholder="ID Produk (cth: 1)">
+        <button id="btn-get-product-by-id">Get Product by ID</button>
     </fieldset>
 
     <fieldset>
@@ -175,6 +179,9 @@
 
     <fieldset>
         <legend>User Panel (Publik)</legend>
+        <!-- BARU: Tombol untuk Get All Users -->
+        <button id="btn-user-get-all">Get All Users</button>
+        <hr style="margin: 10px 0; border: 0; border-top: 1px solid #eee;">
         <input type="number" id="user-id" placeholder="User ID (cth: 1)">
         <button id="btn-user-get">Get User by ID</button>
         <hr style="margin: 10px 0; border: 0; border-top: 1px solid #eee;">
@@ -291,6 +298,22 @@
                 showResponse(await res.json());
             } catch (e) { showResponse({ error: e.message }); }
         };
+
+        // BARU: Event listener untuk Get Product by ID
+        document.getElementById('btn-get-product-by-id').onclick = async () => {
+            const prodId = document.getElementById('prod-id').value;
+            if (!prodId) {
+                showResponse({ error: "Masukkan ID Produk" });
+                return;
+            }
+            try {
+                const res = await fetch(`${baseUrl}/products/search/${prodId}`, {
+                    method: 'GET'
+                });
+                showResponse(await res.json());
+            } catch (e) { showResponse({ error: e.message }); }
+        };
+
 
         // --- 2. CUSTOMER: CART ---
         document.getElementById('btn-add-cart').onclick = async () => {
@@ -470,6 +493,16 @@
         };
 
         // --- 3. USER ---
+        // BARU: Event listener untuk Get All Users
+        document.getElementById('btn-user-get-all').onclick = async () => {
+            try {
+                const res = await fetch(`${baseUrl}/users`, {
+                    method: 'GET'
+                });
+                showResponse(await res.json());
+            } catch (e) { showResponse({ error: e.message }); }
+        };
+
         document.getElementById('btn-user-get').onclick = async () => {
             const userId = document.getElementById('user-id').value;
             if (!userId) {

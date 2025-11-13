@@ -54,6 +54,13 @@ const getUser = async (req, res) => {
 const updateUser = async (req, res) => {
     try {
         const { id } = req.params;
+
+        const LoggedInUserId = req.user.userId;
+        const LoggedInUserRole = req.user.role;
+
+        if (LoggedInUserRole !== 'admin' && LoggedInUserId !== parseInt(id, 10)) {
+            return res.status(403).json({ message: 'Akses ditolak. Anda hanya bisa mengubah data Anda sendiri.' });
+        }
         // Basic validation for numeric ID
         if (!/^\d+$/.test(String(id))) {
             return res.status(400).json({ message: 'Invalid user id.' });
