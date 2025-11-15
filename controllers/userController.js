@@ -1,8 +1,5 @@
 const { getDbPool } = require('../database');
 const bcrypt = require("bcryptjs");
-const jwt = require('jsonwebtoken');
-const JWT_SECRET = process.env.JWT_SECRET;
-
 
 // Logic starts here
 const getUserById = async (req, res) => {
@@ -126,39 +123,41 @@ const updateUser = async (req, res) => {
 
 const userLogin = async (req, res) => {
     try {
-        const { email, password } = req.body; // Credentials from client
+        const { email, password } = req.body;
         if (!email || !password) {
             return res.status(400).json({ message: 'Email and password are required.' });
         }
 
         const db = await getDbPool();
-        // Fetching from 'user' table and selecting the hashed password column
         const [users] = await db.query('SELECT * FROM User WHERE email = ?', [email]);
         if (users.length === 0) {
             return res.status(401).json({ message: 'Invalid credentials.' });
         }
 
         const user = users[0];
-        // Comparing plaintext with the hashed password stored in DB
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
             return res.status(401).json({ message: 'Invalid credentials.' });
         }
 
-        // Create JWT signed with secret; includes basic claims for authorization
-        const token = jwt.sign(
-            { userId: user.user_id, email: user.email, role: user.role },
-            JWT_SECRET,
-            { expiresIn: '3h' } // Token expires in 1 hour
-        );
+        // 1. Buat data user untuk disimpan di session
+        const sessionUser = {
+            userId: user.user_id,
+            email: user.email,
+            role: user.role
+        };
 
-        res.json({ message: 'Logged in successfully!', token });
+        // 2. Simpan di session
+        req.session.user = sessionUser;
+
+        // 3. Kirim data user (tanpa token)
+        res.json({ message: 'Logged in successfully!', user: sessionUser });
 
     } catch (error) {
         console.error('Login failed:', error);
-        res.status(500).json({ message: 'Server error during login.' });
+        res.status(500).json({message: 'Server error during login.'});
     }
-};
+}
 
 const userRegister = async (req, res) => {
     try {
@@ -196,6 +195,17 @@ const userRegister = async (req, res) => {
     }
 };
 
+const userLogout = async (req, res) => {
+    req.session.destroy((err) => {
+        if (err) {
+            console.error(err);
+            return res.status(500).json({ message: 'Server error during logout.' });
+        }
+        res.clearCookie('sessionId');
+        res.status(200).json({ message: 'Logged out berhasil!' });
+    });
+}
+
 // Logic ends here
 module.exports = {
     getUserById,
@@ -204,6 +214,5 @@ module.exports = {
     getUserByEmail,
     userLogin,
     userRegister,
-
-
+    userLogout
 }

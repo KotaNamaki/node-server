@@ -27,7 +27,7 @@ app.use(express.json());
             schema: {
                 tableName: 'UserSession',
                 columnNames: {
-                    sessionId: 'sessionId',
+                    session_id: 'session_id',
                     expires: 'expires',
                     data: 'data'
                 }

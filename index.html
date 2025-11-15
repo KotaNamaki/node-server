@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>API Tester Lengkap (v2)</title>
+    <title>API Tester (Session-Based)</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -19,7 +19,7 @@
             background-color: #ffffff;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-            flex-basis: 300px; /* Lebar dasar untuk setiap kolom */
+            flex-basis: 300px;
             flex-grow: 1;
         }
         h2 {
@@ -43,7 +43,7 @@
             width: 100%;
             margin-bottom: 8px;
             padding: 10px;
-            box-sizing: border-box; /* Penting untuk padding */
+            box-sizing: border-box;
             border: 1px solid #ccc;
             border-radius: 4px;
         }
@@ -60,10 +60,9 @@
         button.delete:hover { background-color: #c82333; }
         button.update { background-color: #ffc107; color: #212529; }
         button.update:hover { background-color: #e0a800; }
-
         #response-output {
-            white-space: pre-wrap; /* Agar JSON rapi */
-            background-color: #282c34; /* Dark mode */
+            white-space: pre-wrap;
+            background-color: #282c34;
             color: #abb2bf;
             border: 1px solid #ddd;
             padding: 15px;
@@ -96,7 +95,6 @@
         <input type="text" id="reg-nama" placeholder="Nama (cth: User Biasa)">
         <input type="text" id="reg-hp" placeholder="No HP (cth: 08123)">
         <input type="password" id="reg-pass" placeholder="Password">
-        <!-- BARU: Tambahkan dropdown untuk role -->
         <select id="reg-role">
             <option value="customer">Customer</option>
             <option value="admin">Admin</option>
@@ -108,7 +106,13 @@
         <legend>Login</legend>
         <input type="email" id="login-email" placeholder="Email (user@mail.com)">
         <input type="password" id="login-pass" placeholder="Password">
-        <button id="btn-login">Login (Dapat Token)</button>
+        <button id="btn-login">Login (Dapat Cookie)</button>
+    </fieldset>
+
+    <!-- BARU: Tombol Logout -->
+    <fieldset>
+        <legend>Logout (Perlu Login)</legend>
+        <button id="btn-logout" class="delete">Logout</button>
     </fieldset>
 
     <fieldset>
@@ -125,7 +129,6 @@
         <legend>Products (Publik)</legend>
         <button id="btn-get-products">Get All Products</button>
         <hr style="margin: 10px 0; border: 0; border-top: 1px solid #eee;">
-        <!-- BARU: Tombol untuk Get Product by ID -->
         <input type="number" id="prod-id" placeholder="ID Produk (cth: 1)">
         <button id="btn-get-product-by-id">Get Product by ID</button>
     </fieldset>
@@ -178,8 +181,7 @@
     </fieldset>
 
     <fieldset>
-        <legend>User Panel (Publik)</legend>
-        <!-- BARU: Tombol untuk Get All Users -->
+        <legend>User Panel (Perlu Login)</legend>
         <button id="btn-user-get-all">Get All Users</button>
         <hr style="margin: 10px 0; border: 0; border-top: 1px solid #eee;">
         <input type="number" id="user-id" placeholder="User ID (cth: 1)">
@@ -200,7 +202,9 @@
 <script>
     // --- Konfigurasi ---
     const baseUrl = 'http://localhost:3000/api'; // Pastikan ini alamat server Anda
-    let jwtToken = null; // Token disimpan di sini setelah login
+    // 'null' untuk tes dari file lokal
+    // Ganti 'http://127.0.0.1:5500' jika pakai Live Server
+    const clientUrl = 'null';
 
     // --- Elemen DOM ---
     const output = document.getElementById('response-output');
@@ -211,26 +215,9 @@
         output.textContent = JSON.stringify(data, null, 2);
     };
 
-    const getHeaders = (needsAuth = false) => {
-        const headers = { 'Content-Type': 'application/json' };
-        if (needsAuth) {
-            if (!jwtToken) {
-                // Modifikasi: Jangan gunakan alert
-                showResponse({ error: "Anda harus Login terlebih dahulu!", message: "Token not found" });
-                throw new Error('Token not found');
-            }
-            headers['Authorization'] = `Bearer ${jwtToken}`;
-        }
-        return headers;
-    };
-
-    // Helper untuk decode JWT (hanya untuk tampilan, tidak aman)
-    const decodeToken = (token) => {
-        try {
-            return JSON.parse(atob(token.split('.')[1]));
-        } catch (e) {
-            return null;
-        }
+    // DIUBAH: Tidak perlu kirim token, hanya Content-Type
+    const getHeaders = () => {
+        return { 'Content-Type': 'application/json' };
     };
 
     // --- Event Listeners ---
@@ -243,12 +230,13 @@
                 nama: document.getElementById('reg-nama').value,
                 no_hp: document.getElementById('reg-hp').value,
                 password: document.getElementById('reg-pass').value,
-                role: document.getElementById('reg-role').value // BARU: Ambil nilai role
+                role: document.getElementById('reg-role').value
             };
             try {
                 const res = await fetch(`${baseUrl}/auth/register`, {
                     method: 'POST',
                     headers: getHeaders(),
+                    credentials: 'include', // WAJIB untuk kirim/terima cookie
                     body: JSON.stringify(body)
                 });
                 showResponse(await res.json());
@@ -264,42 +252,55 @@
                 const res = await fetch(`${baseUrl}/auth/login`, {
                     method: 'POST',
                     headers: getHeaders(),
+                    credentials: 'include', // WAJIB
                     body: JSON.stringify(body)
                 });
                 const data = await res.json();
-                if (res.ok && data.token) {
-                    jwtToken = data.token;
-                    const userInfo = decodeToken(jwtToken);
-                    // Tampilkan info user
+
+                // DIUBAH: Cek data.user, bukan data.token
+                if (res.ok && data.user) {
                     userInfoEl.textContent =
-                        `Token: ${jwtToken.substring(0, 20)}...\n` +
-                        `User ID: ${userInfo.userId}\n` +
-                        `Email: ${userInfo.email}\n` +
-                        `Role: ${userInfo.role.toUpperCase()}`; // PENTING
-                    showResponse({ message: "LOGIN BERHASIL. Token disimpan.", userInfo });
+                        `User ID: ${data.user.userId}\n` +
+                        `Email: ${data.user.email}\n` +
+                        `Role: ${data.user.role.toUpperCase()}`;
+                    showResponse({ message: "LOGIN BERHASIL. Session cookie diterima.", userInfo: data.user });
                 } else {
-                    jwtToken = null;
-                    userInfoEl.textContent = "Login gagal atau token tidak diterima.";
+                    userInfoEl.textContent = "Login gagal.";
                     showResponse(data);
                 }
             } catch (e) {
-                jwtToken = null;
                 userInfoEl.textContent = "Error saat login.";
                 showResponse({ error: e.message });
             }
+        };
+
+        // BARU: Event listener untuk Logout
+        document.getElementById('btn-logout').onclick = async () => {
+            try {
+                const res = await fetch(`${baseUrl}/auth/logout`, {
+                    method: 'POST',
+                    headers: getHeaders(),
+                    credentials: 'include' // WAJIB
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    userInfoEl.textContent = "Anda telah logout.";
+                }
+                showResponse(data);
+            } catch (e) { showResponse({ error: e.message }); }
         };
 
         // --- 2. CUSTOMER: PRODUCTS ---
         document.getElementById('btn-get-products').onclick = async () => {
             try {
                 const res = await fetch(`${baseUrl}/products/search`, {
-                    method: 'GET'
+                    method: 'GET',
+                    credentials: 'include' // WAJIB
                 });
                 showResponse(await res.json());
             } catch (e) { showResponse({ error: e.message }); }
         };
 
-        // BARU: Event listener untuk Get Product by ID
         document.getElementById('btn-get-product-by-id').onclick = async () => {
             const prodId = document.getElementById('prod-id').value;
             if (!prodId) {
@@ -308,12 +309,12 @@
             }
             try {
                 const res = await fetch(`${baseUrl}/products/search/${prodId}`, {
-                    method: 'GET'
+                    method: 'GET',
+                    credentials: 'include' // WAJIB
                 });
                 showResponse(await res.json());
             } catch (e) { showResponse({ error: e.message }); }
         };
-
 
         // --- 2. CUSTOMER: CART ---
         document.getElementById('btn-add-cart').onclick = async () => {
@@ -324,11 +325,12 @@
             try {
                 const res = await fetch(`${baseUrl}/cart/items`, {
                     method: 'POST',
-                    headers: getHeaders(true),
+                    headers: getHeaders(),
+                    credentials: 'include', // WAJIB
                     body: JSON.stringify(body)
                 });
                 showResponse(await res.json());
-            } catch (e) { /* Error (spt token) sudah ditangani di getHeaders */ }
+            } catch (e) { showResponse({ error: e.message }); }
         };
 
         document.getElementById('btn-cart-update').onclick = async () => {
@@ -343,11 +345,12 @@
             try {
                 const res = await fetch(`${baseUrl}/cart/items/${prodId}`, {
                     method: 'PATCH',
-                    headers: getHeaders(true),
+                    headers: getHeaders(),
+                    credentials: 'include', // WAJIB
                     body: JSON.stringify(body)
                 });
                 showResponse(await res.json());
-            } catch (e) { /* Error (spt token) sudah ditangani di getHeaders */ }
+            } catch (e) { showResponse({ error: e.message }); }
         };
 
         document.getElementById('btn-cart-delete').onclick = async () => {
@@ -359,20 +362,22 @@
             try {
                 const res = await fetch(`${baseUrl}/cart/items/${prodId}`, {
                     method: 'DELETE',
-                    headers: getHeaders(true)
+                    headers: getHeaders(),
+                    credentials: 'include' // WAJIB
                 });
                 showResponse(await res.json());
-            } catch (e) { /* Error (spt token) sudah ditangani di getHeaders */ }
+            } catch (e) { showResponse({ error: e.message }); }
         };
 
         document.getElementById('btn-get-cart').onclick = async () => {
             try {
                 const res = await fetch(`${baseUrl}/cart`, {
                     method: 'GET',
-                    headers: getHeaders(true)
+                    headers: getHeaders(),
+                    credentials: 'include' // WAJIB
                 });
                 showResponse(await res.json());
-            } catch (e) { /* Error (spt token) sudah ditangani di getHeaders */ }
+            } catch (e) { showResponse({ error: e.message }); }
         };
 
         // --- 2. CUSTOMER: ORDERS ---
@@ -380,14 +385,15 @@
             try {
                 const res = await fetch(`${baseUrl}/orders`, {
                     method: 'POST',
-                    headers: getHeaders(true)
+                    headers: getHeaders(),
+                    credentials: 'include' // WAJIB
                 });
                 const data = await res.json();
                 if (res.ok && data.id_pesanan) {
                     document.getElementById('order-id').value = data.id_pesanan;
                 }
                 showResponse(data);
-            } catch (e) { /* Error (spt token) sudah ditangani di getHeaders */ }
+            } catch (e) { showResponse({ error: e.message }); }
         };
 
         document.getElementById('btn-get-order-detail').onclick = async () => {
@@ -399,17 +405,18 @@
             try {
                 const res = await fetch(`${baseUrl}/orders/get/${orderid}`, {
                     method: 'GET',
-                    headers: getHeaders(true)
+                    headers: getHeaders(),
+                    credentials: 'include' // WAJIB
                 });
                 showResponse(await res.json());
-            } catch (e) { /* Error (spt token) sudah ditangani di getHeaders */ }
+            } catch (e) { showResponse({ error: e.message }); }
         };
 
         document.getElementById('btn-add-payment').onclick = async () => {
             const orderId = document.getElementById('order-id').value;
             const method = document.getElementById('pay-method').value;
             if (!orderId) {
-                showResponse({ error: 'ID Pesanan harus diisi (didapat dari checkout)' });
+                showResponse({ error: 'ID Pesanan harus diisi' });
                 return;
             }
             if (!method) {
@@ -423,11 +430,12 @@
             try {
                 const res = await fetch(`${baseUrl}/orders/${orderId}/payments`, {
                     method: 'POST',
-                    headers: getHeaders(true),
+                    headers: getHeaders(),
+                    credentials: 'include', // WAJIB
                     body: JSON.stringify(body)
                 });
                 showResponse(await res.json());
-            } catch (e) { /* Error (spt token) sudah ditangani di getHeaders */ }
+            } catch (e) { showResponse({ error: e.message }); }
         };
 
         // --- 3. ADMIN ---
@@ -442,11 +450,12 @@
             try {
                 const res = await fetch(`${baseUrl}/products`, {
                     method: 'POST',
-                    headers: getHeaders(true), // Perlu auth
+                    headers: getHeaders(),
+                    credentials: 'include', // WAJIB
                     body: JSON.stringify(body)
                 });
                 showResponse(await res.json());
-            } catch (e) { /* Error (spt token) sudah ditangani di getHeaders */ }
+            } catch (e) { showResponse({ error: e.message }); }
         };
 
         document.getElementById('btn-admin-update-prod').onclick = async () => {
@@ -455,26 +464,24 @@
                 showResponse({ error: "Masukkan ID Produk di panel Admin" });
                 return;
             }
-            // Kirim field yang diisi saja
             const body = {};
             const nama = document.getElementById('admin-prod-nama').value;
             const deskripsi = document.getElementById('admin-prod-desk').value;
             const harga = document.getElementById('admin-prod-harga').value;
             const stok = document.getElementById('admin-prod-stok').value;
-
             if (nama) body.nama = nama;
             if (deskripsi) body.deskripsi = deskripsi;
             if (harga) body.harga = parseFloat(harga);
             if (stok) body.stok = parseInt(stok, 10);
-
             try {
                 const res = await fetch(`${baseUrl}/products/${prodId}`, {
                     method: 'PATCH',
-                    headers: getHeaders(true), // Perlu auth
+                    headers: getHeaders(),
+                    credentials: 'include', // WAJIB
                     body: JSON.stringify(body)
                 });
                 showResponse(await res.json());
-            } catch (e) { /* Error (spt token) sudah ditangani di getHeaders */ }
+            } catch (e) { showResponse({ error: e.message }); }
         };
 
         document.getElementById('btn-admin-delete-prod').onclick = async () => {
@@ -486,18 +493,20 @@
             try {
                 const res = await fetch(`${baseUrl}/products/${prodId}`, {
                     method: 'DELETE',
-                    headers: getHeaders(true) // Perlu auth
+                    headers: getHeaders(),
+                    credentials: 'include' // WAJIB
                 });
                 showResponse(await res.json());
-            } catch (e) { /* Error (spt token) sudah ditangani di getHeaders */ }
+            } catch (e) { showResponse({ error: e.message }); }
         };
 
         // --- 3. USER ---
-        // BARU: Event listener untuk Get All Users
         document.getElementById('btn-user-get-all').onclick = async () => {
             try {
                 const res = await fetch(`${baseUrl}/users`, {
-                    method: 'GET'
+                    method: 'GET',
+                    headers: getHeaders(),
+                    credentials: 'include' // WAJIB
                 });
                 showResponse(await res.json());
             } catch (e) { showResponse({ error: e.message }); }
@@ -512,7 +521,8 @@
             try {
                 const res = await fetch(`${baseUrl}/users/${userId}`, {
                     method: 'GET',
-                    // headers: getHeaders(true) // API Anda tidak melindungi ini
+                    headers: getHeaders(),
+                    credentials: 'include' // WAJIB
                 });
                 showResponse(await res.json());
             } catch (e) { showResponse({ error: e.message }); }
@@ -533,7 +543,8 @@
             try {
                 const res = await fetch(`${baseUrl}/users/update/${userId}`, {
                     method: 'PATCH',
-                    headers: getHeaders(), // API Anda tidak melindungi ini
+                    headers: getHeaders(),
+                    credentials: 'include', // WAJIB
                     body: JSON.stringify(body)
                 });
                 showResponse(await res.json());
