@@ -3,7 +3,7 @@ const userController = require('../controllers/userController');
 const router = express.Router();
 const {authReq, adminReq} = require('../middleware/authMiddleware');
 
-app.use(authReq, adminReq);
+router.use(authReq, adminReq);
 
 // Pemetaan URL ke ke fungsi router
 router.get('/:id', userController.getUserById);

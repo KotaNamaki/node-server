@@ -2,42 +2,79 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 
+const session = require('express-session');
+const MySQLStore = require('express-mysql-session')(session);
+const { getDbPool} = require('./database');
+
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// --- Middleware ---
-//app.use(cors({
-//    origin: ['https://motodiv.store', 'localhost', 'https://admin.motodiv.store'],
-//    methods: ['GET','POST','PATCH','DELETE'],
-//    credentials: true
-//}));
-app.use(cors());
+app.use(cors({
+    origin: ['http://localhost', 'http://127.0.0.1:5500', 'https://motodiv.store', 'https://admin.motodiv.store', 'null'], // 'null' untuk file lokal
+    methods: ['GET','POST','PATCH','DELETE'],
+    credentials: true // PENTING: Izinkan cookies
+}));
 app.use(express.json());
 
 // --- Memuat Routes ---
-const ProductRoutes = require('./routes/productRoutes');
-const UserRoutes = require('./routes/usersRoutes');
-const AuthRoutes = require('./routes/authRoutes');     // BARU
-const CartRoutes = require('./routes/cartRoutes');       // BARU
-const OrderRoutes = require('./routes/orderRoutes');
+(async () => {
+    try {
+        const dbPool = await getDbPool();
+        const sessionStore = new MySQLStore({
+            expiration: 86400000,
+            createDatabaseTable : true,
+            schema: {
+                tableName: 'UserSession',
+                columnNames: {
+                    sessionId: 'sessionId',
+                    expires: 'expires',
+                    data: 'data'
+                }
+            }
+        }, dbPool);
 
-// DIUBAH: 'next' wajib ditambahkan untuk error handler
-app.use((err, req, res, next) => {
-    console.log(err);
-    res.status(500).json({ message: 'Terjadi Error: ', err});
-});
+        app.use(session({
+            key: 'sessionId',
+            secret: process.env.SESSION_SECRET || 'my-fallback-session-secret',
+            store: sessionStore,
+            resave: true,
+            saveUninitialized: false,
+            cookie: {
+                httpOnly: true,
+                secure: false,
+                maxAge: 60 * 60 * 24
+            }
+        }));
+        console.log(
+            'Session store terhubung ke MySQL SERVER'
+        );
 
-app.get('/', (req, res) => {
-    res.send('E-commerce API is running!');
-});
+        const ProductRoutes = require('./routes/productRoutes');
+        const UserRoutes = require('./routes/usersRoutes');
+        const AuthRoutes = require('./routes/authRoutes');
+        const CartRoutes = require('./routes/cartRoutes');
+        const OrderRoutes = require('./routes/orderRoutes');
 
-// --- Menerapkan Routes ---
-app.use('/api/products', ProductRoutes);
-app.use('/api/users', UserRoutes);
-app.use('/api/auth', AuthRoutes);     // BARU
-app.use('/api/cart', CartRoutes);     // BARU
-app.use('/api/orders', OrderRoutes);  // DIUBAH (sebelumnya /api/purchase)
+        app.use((err, req, res, next) => {
+            console.log(err);
+            res.status(500).json({ message: 'Terjadi Error: ', err });
+        });
 
-app.listen(PORT, () => {
-    console.log(`Server running on port http://localhost:${PORT}`);
-});
+        app.get('/', (req, res) => {
+            res.render('E-Commerce API (Session-based) is up and running!');
+        });
+
+        app.use('/api/products', ProductRoutes);
+        app.use('/api/users', UserRoutes);
+        app.use('/api/auth', AuthRoutes);
+        app.use('/api/cart', CartRoutes);
+        app.use('/api/orders', OrderRoutes);
+
+        app.listen(PORT, () => {
+            console.log(`Server started on https://localhost:${PORT}`);
+        });
+    } catch (err) {
+        console.error({message: 'Gagal dalam starting server atau session store', err});
+    }
+})();
