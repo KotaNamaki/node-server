@@ -241,7 +241,7 @@ const getAllOrders = async (req, res) => {
         if (connection) connection.release();
     }
 };
-
+// new
 const updateOrderStatus = async (req, res) => {
     let connection = null;
     try {
