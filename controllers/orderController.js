@@ -222,9 +222,63 @@ const getOrderById = async (req, res) => {
         if (connection) connection.release();
     }
 };
+
+const getAllOrders = async (req, res) => {
+    let connection = null;
+    try {
+        const pool = await getDbPool();
+        connection = await pool.getConnection();
+
+        const [orders] = await connection.query('SELECT p.id_pesanan, p.total_harga, p.status_pesanan, p.created_at, u.nama as customer_name, u.email as customer_email FROM Pesanan p join User u ON p.id_user = u.user_id ORDER BY p.created_at DESC');
+
+        return res.status(200).json(orders);
+
+    } catch (error) {
+        console.error('Error fetching all order:', error);
+        return res.status(500).json({ message: 'Server mengambil all order: ', error});
+    }
+    finally {
+        if (connection) connection.release();
+    }
+};
+
+const updateOrderStatus = async (req, res) => {
+    let connection = null;
+    try {
+        const orderId = parseInt(req.params.id, 10);
+        const {status} = req.body || {};
+        const pool = await getDbPool();
+        connection = await pool.getConnection();
+
+        const validStatus = ['pending', 'diproses', 'selesai', 'dibatalkan'];
+        if (!validStatus.includes(status)) {
+            return res.status(400).json({ message: `Status '${status}' tidak valid. Gunakan ${validStatus.join(', ')} ` });
+        }
+
+        const [orderRows] = await connection.query('SELECT id_pesanan from Pesanan WHERE id_pesanan = ?',[orderId]);
+        if (orderRows.length === 0){
+            return res.status(404).json({message: 'Pesanan tidak ditemukan/valid'});
+        }
+
+        const [result] = await connection.query('UPDATE Pesanan SET status_pesanan = ?, updated_at = NOW() WHERE id_pesanan = ? ',[status, orderId]);
+        if(result.affectedRows.length === 0){
+            return res.status(500).json({message: 'Gagal memperbarui status.'});
+        }
+
+        return res.status(200).json({message: `Status pesanan ${orderId} berhasil diubah menjadi ${status}.`, id_pesanan: orderId, status:status});
+    } catch (error) {
+        console.error('Error updating status pesanan', error);
+        return res.status(500).json({ message: 'Server Order error', error });
+    } finally {
+        if (connection) connection.release();
+    }
+}
+
 //logi ends here
 module.exports = {
     addOrder,
     addPayment,
     getOrderById,
+    getAllOrders,
+    updateOrderStatus
 };
