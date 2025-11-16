@@ -55,6 +55,8 @@ app.use(express.json());
         const AuthRoutes = require('./routes/authRoutes');
         const CartRoutes = require('./routes/cartRoutes');
         const OrderRoutes = require('./routes/orderRoutes');
+        const LayananRoutes = require('./routes/layananRoutes');
+        const UlasanRoutes = require('./routes/ulasanRoutes');
 
         app.use((err, req, res, next) => {
             console.log(err);
@@ -70,6 +72,8 @@ app.use(express.json());
         app.use('/api/auth', AuthRoutes);
         app.use('/api/cart', CartRoutes);
         app.use('/api/orders', OrderRoutes);
+        app.use('/api/layanan', LayananRoutes);
+        app.use('/api/ulasan', UlasanRoutes);
 
         app.listen(PORT, () => {
             console.log(`Server started on https://localhost:${PORT}`);
