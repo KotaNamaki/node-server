@@ -10,11 +10,11 @@ const { getDbPool} = require('./database');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-//app.use(cors({
-//    origin: ['http://localhost', 'http://127.0.0.1:5500', 'https://motodiv.store', 'https://admin.motodiv.store', 'null'], // 'null' untuk file lokal
-//    methods: ['GET','POST','PATCH','DELETE'],
-//    credentials: true // PENTING: Izinkan cookies
-//}));
+app.use(cors({
+    origin: ['http://localhost', 'http://127.0.0.1:5500', 'https://motodiv.store', 'https://admin.motodiv.store', 'null'], // 'null' untuk file lokal
+    methods: ['GET','POST','PATCH','DELETE'],
+    credentials: true // PENTING: Izinkan cookies
+}));
 //whoops
 app.use(express.json());
 
