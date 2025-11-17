@@ -3,6 +3,7 @@
 ---
 deployment:
   tasks:
+    - export DEPLOYPATH2=/home/motodivs/admin.motodiv.store
     - export DEPLOYPATH=/home/motodivs/private/
     - /bin/cp server.js $DEPLOYPATH
     - /bin/cp database.js $DEPLOYPATH
@@ -10,3 +11,4 @@ deployment:
     - /bin/cp -R middleware $DEPLOYPATH
     - /bin/cp -R controllers $DEPLOYPATH
     - /bin/cp -R routes $DEPLOYPATH
+    - /bin/cp index.html $DEPLOYPATH2
