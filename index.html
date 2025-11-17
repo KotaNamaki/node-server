@@ -85,6 +85,7 @@
 </head>
 <body>
 
+<!-- KOLOM 1: AUTENTIKASI & INFO -->
 <section>
     <h2>1. Auth & Info</h2>
 
@@ -108,6 +109,7 @@
         <button id="btn-login">Login (Dapat Cookie)</button>
     </fieldset>
 
+    <!-- BARU: Tombol Logout -->
     <fieldset>
         <legend>Logout (Perlu Login)</legend>
         <button id="btn-logout" class="delete">Logout</button>
@@ -119,6 +121,7 @@
     </fieldset>
 </section>
 
+<!-- KOLOM 2: CUSTOMER -->
 <section>
     <h2>2. Alur Customer</h2>
 
@@ -160,6 +163,7 @@
     </fieldset>
 </section>
 
+<!-- KOLOM 3: ADMIN & USER -->
 <section>
     <h2>3. Admin & User Actions</h2>
     <fieldset>
@@ -189,6 +193,7 @@
     </fieldset>
 </section>
 
+<!-- KOLOM 4: RESPONSE -->
 <section style="flex-grow: 2; flex-basis: 400px;">
     <h2>Server Response</h2>
     <pre id="response-output">...</pre>
@@ -196,9 +201,7 @@
 
 <script>
     // --- Konfigurasi ---
-    // URL Server yang diperbarui
-    const baseUrl = 'https://motodiv.store/api';
-
+    const baseUrl = 'http://motodiv.store/api'; // Pastikan ini alamat server Anda
     // 'null' untuk tes dari file lokal
     // Ganti 'http://127.0.0.1:5500' jika pakai Live Server
     const clientUrl = 'null';
