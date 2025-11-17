@@ -201,7 +201,7 @@
 
 <script>
     // --- Konfigurasi ---
-    const baseUrl = 'https://motodiv.store/api'; // Pastikan ini alamat server Anda
+    const baseUrl = 'https://motodiv.store'; // Pastikan ini alamat server Anda
     // 'null' untuk tes dari file lokal
     // Ganti 'http://127.0.0.1:5500' jika pakai Live Server
     const clientUrl = 'null';
@@ -233,7 +233,7 @@
                 role: document.getElementById('reg-role').value
             };
             try {
-                const res = await fetch(`${baseUrl}/auth/register`, {
+                const res = await fetch(`${baseUrl}/api/auth/register`, {
                     method: 'POST',
                     headers: getHeaders(),
                     credentials: 'include', // WAJIB untuk kirim/terima cookie
@@ -249,7 +249,7 @@
                 password: document.getElementById('login-pass').value
             };
             try {
-                const res = await fetch(`${baseUrl}/auth/login`, {
+                const res = await fetch(`${baseUrl}/api/auth/login`, {
                     method: 'POST',
                     headers: getHeaders(),
                     credentials: 'include', // WAJIB
@@ -277,7 +277,7 @@
         // BARU: Event listener untuk Logout
         document.getElementById('btn-logout').onclick = async () => {
             try {
-                const res = await fetch(`${baseUrl}/auth/logout`, {
+                const res = await fetch(`${baseUrl}/api/auth/logout`, {
                     method: 'POST',
                     headers: getHeaders(),
                     credentials: 'include' // WAJIB
@@ -293,7 +293,7 @@
         // --- 2. CUSTOMER: PRODUCTS ---
         document.getElementById('btn-get-products').onclick = async () => {
             try {
-                const res = await fetch(`${baseUrl}/products/search`, {
+                const res = await fetch(`${baseUrl}/api/products/search`, {
                     method: 'GET',
                     credentials: 'include' // WAJIB
                 });
@@ -308,7 +308,7 @@
                 return;
             }
             try {
-                const res = await fetch(`${baseUrl}/products/search/${prodId}`, {
+                const res = await fetch(`${baseUrl}/api/products/search/${prodId}`, {
                     method: 'GET',
                     credentials: 'include' // WAJIB
                 });
@@ -323,7 +323,7 @@
                 qty: parseInt(document.getElementById('cart-qty').value, 10)
             };
             try {
-                const res = await fetch(`${baseUrl}/cart/items`, {
+                const res = await fetch(`${baseUrl}/api/cart/items`, {
                     method: 'POST',
                     headers: getHeaders(),
                     credentials: 'include', // WAJIB
@@ -343,7 +343,7 @@
                 return;
             }
             try {
-                const res = await fetch(`${baseUrl}/cart/items/${prodId}`, {
+                const res = await fetch(`${baseUrl}/api/cart/items/${prodId}`, {
                     method: 'PATCH',
                     headers: getHeaders(),
                     credentials: 'include', // WAJIB
@@ -360,7 +360,7 @@
                 return;
             }
             try {
-                const res = await fetch(`${baseUrl}/cart/items/${prodId}`, {
+                const res = await fetch(`${baseUrl}/api/cart/items/${prodId}`, {
                     method: 'DELETE',
                     headers: getHeaders(),
                     credentials: 'include' // WAJIB
@@ -371,7 +371,7 @@
 
         document.getElementById('btn-get-cart').onclick = async () => {
             try {
-                const res = await fetch(`${baseUrl}/cart`, {
+                const res = await fetch(`${baseUrl}/api/cart`, {
                     method: 'GET',
                     headers: getHeaders(),
                     credentials: 'include' // WAJIB
@@ -383,7 +383,7 @@
         // --- 2. CUSTOMER: ORDERS ---
         document.getElementById('btn-checkout').onclick = async () => {
             try {
-                const res = await fetch(`${baseUrl}/orders`, {
+                const res = await fetch(`${baseUrl}/api/orders`, {
                     method: 'POST',
                     headers: getHeaders(),
                     credentials: 'include' // WAJIB
@@ -403,7 +403,7 @@
                 return;
             }
             try {
-                const res = await fetch(`${baseUrl}/orders/get/${orderid}`, {
+                const res = await fetch(`${baseUrl}/api/orders/get/${orderid}`, {
                     method: 'GET',
                     headers: getHeaders(),
                     credentials: 'include' // WAJIB
@@ -428,7 +428,7 @@
                 amount: parseFloat(document.getElementById('pay-amount').value)
             };
             try {
-                const res = await fetch(`${baseUrl}/orders/${orderId}/payments`, {
+                const res = await fetch(`${baseUrl}/api/orders/${orderId}/payments`, {
                     method: 'POST',
                     headers: getHeaders(),
                     credentials: 'include', // WAJIB
@@ -448,7 +448,7 @@
                 stok: parseInt(document.getElementById('admin-prod-stok').value, 10)
             };
             try {
-                const res = await fetch(`${baseUrl}/products`, {
+                const res = await fetch(`${baseUrl}/api/products`, {
                     method: 'POST',
                     headers: getHeaders(),
                     credentials: 'include', // WAJIB
@@ -474,7 +474,7 @@
             if (harga) body.harga = parseFloat(harga);
             if (stok) body.stok = parseInt(stok, 10);
             try {
-                const res = await fetch(`${baseUrl}/products/${prodId}`, {
+                const res = await fetch(`${baseUrl}/api/products/${prodId}`, {
                     method: 'PATCH',
                     headers: getHeaders(),
                     credentials: 'include', // WAJIB
@@ -491,7 +491,7 @@
                 return;
             }
             try {
-                const res = await fetch(`${baseUrl}/products/${prodId}`, {
+                const res = await fetch(`${baseUrl}/api/products/${prodId}`, {
                     method: 'DELETE',
                     headers: getHeaders(),
                     credentials: 'include' // WAJIB
@@ -503,7 +503,7 @@
         // --- 3. USER ---
         document.getElementById('btn-user-get-all').onclick = async () => {
             try {
-                const res = await fetch(`${baseUrl}/users`, {
+                const res = await fetch(`${baseUrl}/api/users`, {
                     method: 'GET',
                     headers: getHeaders(),
                     credentials: 'include' // WAJIB
@@ -519,7 +519,7 @@
                 return;
             }
             try {
-                const res = await fetch(`${baseUrl}/users/${userId}`, {
+                const res = await fetch(`${baseUrl}/api/users/${userId}`, {
                     method: 'GET',
                     headers: getHeaders(),
                     credentials: 'include' // WAJIB
@@ -541,7 +541,7 @@
             if (email) body.email = email;
 
             try {
-                const res = await fetch(`${baseUrl}/users/update/${userId}`, {
+                const res = await fetch(`${baseUrl}/api/users/update/${userId}`, {
                     method: 'PATCH',
                     headers: getHeaders(),
                     credentials: 'include', // WAJIB
