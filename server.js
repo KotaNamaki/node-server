@@ -15,6 +15,7 @@ app.use(cors({
     methods: ['GET','POST','PATCH','DELETE'],
     credentials: true // PENTING: Izinkan cookies
 }));
+//whoops
 app.use(express.json());
 
 // --- Memuat Routes ---
