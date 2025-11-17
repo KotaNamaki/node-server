@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>API Tester (Session-Based)</title>
+    <title>API Tester - MotoDiv</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -11,11 +11,11 @@
             flex-wrap: wrap;
             gap: 12px;
             padding: 10px;
-            background-color: #f9f9f9;
+            background-color: #f0f2f5;
         }
         section {
             border: 1px solid #ddd;
-            padding: 10px;
+            padding: 15px;
             background-color: #ffffff;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.05);
@@ -27,16 +27,17 @@
             border-bottom: 2px solid #eee;
             padding-bottom: 8px;
             color: #333;
+            font-size: 1.2rem;
         }
         fieldset {
-            margin-bottom: 12px;
-            border: 1px solid #eee;
+            margin-bottom: 15px;
+            border: 1px solid #e0e0e0;
             border-radius: 6px;
             padding: 10px;
         }
         legend {
             font-weight: bold;
-            color: #555;
+            color: #007bff;
             padding: 0 5px;
         }
         input, select, button {
@@ -60,34 +61,49 @@
         button.delete:hover { background-color: #c82333; }
         button.update { background-color: #ffc107; color: #212529; }
         button.update:hover { background-color: #e0a800; }
+
+        /* Indikator Status */
+        .status-box {
+            padding: 8px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            text-align: center;
+            font-weight: bold;
+        }
+        .connected { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .disconnected { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+
         #response-output {
             white-space: pre-wrap;
             background-color: #282c34;
             color: #abb2bf;
-            border: 1px solid #ddd;
+            border: 1px solid #444;
             padding: 15px;
             border-radius: 6px;
             min-height: 300px;
-            font-family: "Courier New", Courier, monospace;
-            font-size: 14px;
-        }
-        #user-info {
-            background: #fff8e1;
-            padding: 10px;
-            border-radius: 4px;
-            border: 1px solid #ffe58f;
-            white-space: pre-wrap;
+            max-height: 600px;
+            overflow-y: auto;
             font-family: "Courier New", Courier, monospace;
             font-size: 13px;
-            color: #66562b;
+        }
+        #user-info {
+            background: #fff3cd;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #ffeeba;
+            white-space: pre-wrap;
+            font-family: "Courier New", Courier, monospace;
+            font-size: 12px;
+            color: #856404;
         }
     </style>
 </head>
 <body>
 
-<!-- KOLOM 1: AUTENTIKASI & INFO -->
 <section>
     <h2>1. Auth & Info</h2>
+    <div id="connection-status" class="status-box disconnected">Connecting...</div>
 
     <fieldset>
         <legend>Register</legend>
@@ -106,22 +122,20 @@
         <legend>Login</legend>
         <input type="email" id="login-email" placeholder="Email (user@mail.com)">
         <input type="password" id="login-pass" placeholder="Password">
-        <button id="btn-login">Login (Dapat Cookie)</button>
+        <button id="btn-login">Login (Set Session)</button>
     </fieldset>
 
-    <!-- BARU: Tombol Logout -->
     <fieldset>
-        <legend>Logout (Perlu Login)</legend>
+        <legend>Logout</legend>
         <button id="btn-logout" class="delete">Logout</button>
     </fieldset>
 
     <fieldset>
-        <legend>User Info (Setelah Login)</legend>
-        <pre id="user-info">Login untuk melihat info...</pre>
+        <legend>User Info (Session)</legend>
+        <pre id="user-info">Belum Login</pre>
     </fieldset>
 </section>
 
-<!-- KOLOM 2: CUSTOMER -->
 <section>
     <h2>2. Alur Customer</h2>
 
@@ -153,7 +167,7 @@
         <hr style="margin: 10px 0; border: 0; border-top: 1px solid #eee;">
         <select id="pay-method">
             <option value="">-- Pilih Metode --</option>
-            <option value="MOBILE_BANKING">MOBILE BANKING</option>
+            <option value="MOBILE BANKING">MOBILE BANKING</option>
             <option value="DANA">DANA</option>
             <option value="QRIS">QRIS</option>
             <option value="VA">VA</option>
@@ -163,16 +177,16 @@
     </fieldset>
 </section>
 
-<!-- KOLOM 3: ADMIN & USER -->
 <section>
     <h2>3. Admin & User Actions</h2>
     <fieldset>
-        <legend>Admin Panel (Perlu Token Admin)</legend>
+        <legend>Admin Panel (Role Admin)</legend>
         <input type="text" id="admin-prod-nama" placeholder="Nama Produk">
         <input type="text" id="admin-prod-kategori" placeholder="Kategori">
         <input type="text" id="admin-prod-desk" placeholder="Deskripsi">
         <input type="number" id="admin-prod-harga" placeholder="Harga">
         <input type="number" id="admin-prod-stok" placeholder="Stok">
+        <input type="text" id="admin-prod-gambar" placeholder="URL Gambar (Opsional)">
         <button id="btn-admin-add-prod">Add Product</button>
         <hr style="margin: 10px 0; border: 0; border-top: 1px solid #eee;">
         <input type="number" id="admin-prod-id" placeholder="ID Produk (utk Update/Delete)">
@@ -181,51 +195,57 @@
     </fieldset>
 
     <fieldset>
-        <legend>User Panel (Perlu Login)</legend>
-        <button id="btn-user-get-all">Get All Users</button>
+        <legend>User Management</legend>
+        <button id="btn-user-get-all">Get All Users (Admin)</button>
         <hr style="margin: 10px 0; border: 0; border-top: 1px solid #eee;">
-        <input type="number" id="user-id" placeholder="User ID (cth: 1)">
+        <input type="number" id="user-id" placeholder="User ID">
         <button id="btn-user-get">Get User by ID</button>
         <hr style="margin: 10px 0; border: 0; border-top: 1px solid #eee;">
-        <input type="text" id="user-nama" placeholder="Nama Baru">
-        <input type="text" id="user-email" placeholder="Email Baru">
+        <input type="text" id="user-update-nama" placeholder="Nama Baru">
+        <input type="email" id="user-update-email" placeholder="Email Baru">
         <button id="btn-user-update" class="update">Update User</button>
     </fieldset>
 </section>
 
-<!-- KOLOM 4: RESPONSE -->
 <section style="flex-grow: 2; flex-basis: 400px;">
     <h2>Server Response</h2>
-    <pre id="response-output">...</pre>
+    <div style="margin-bottom: 5px; font-size: 0.8rem; color: #666;">
+        Target URL: <span id="target-url-display" style="font-weight: bold;">Loading...</span>
+    </div>
+    <pre id="response-output">Menunggu request...</pre>
 </section>
 
 <script>
-    // --- Konfigurasi ---
-    // Gunakan baseUrl dinamis: jika di localhost gunakan API lokal, selain itu gunakan domain produksi
-    const baseUrl = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
-        ? 'http://localhost:3000/api'
-        : 'https://motodiv.store/api';
-    // 'null' untuk tes dari file lokal; tidak wajib digunakan di bawah
-    const clientUrl = 'null';
+    // --- KONFIGURASI URL ---
+    // Logic: Jika localhost, gunakan port 3000. Jika tidak, tembak ke subdomain api.
+    const isLocalhost = (location.hostname === 'localhost' || location.hostname === '127.0.0.1');
+    const baseUrl = isLocalhost
+        ? 'http://localhost:3000'
+        : 'https://api.motodiv.store';
 
-    // --- Elemen DOM ---
+    // Tampilkan URL target untuk debug
+    document.getElementById('target-url-display').textContent = baseUrl;
+    document.getElementById('connection-status').textContent = `Target: ${baseUrl}`;
+    document.getElementById('connection-status').className = "status-box connected";
+
     const output = document.getElementById('response-output');
     const userInfoEl = document.getElementById('user-info');
 
-    // --- Helper ---
+    // Helper: Tampilkan JSON
     const showResponse = (data) => {
         output.textContent = JSON.stringify(data, null, 2);
     };
 
-    // DIUBAH: Tidak perlu kirim token, hanya Content-Type
+    // Helper: Headers standard
     const getHeaders = () => {
         return { 'Content-Type': 'application/json' };
     };
 
-    // --- Event Listeners ---
     document.addEventListener('DOMContentLoaded', () => {
 
-        // --- 1. AUTH ---
+        // --- 1. AUTHENTICATION ---
+
+        // Register
         document.getElementById('btn-register').onclick = async () => {
             const body = {
                 email: document.getElementById('reg-email').value,
@@ -238,13 +258,14 @@
                 const res = await fetch(`${baseUrl}/auth/register`, {
                     method: 'POST',
                     headers: getHeaders(),
-                    credentials: 'include', // WAJIB untuk kirim/terima cookie
+                    credentials: 'include',
                     body: JSON.stringify(body)
                 });
                 showResponse(await res.json());
             } catch (e) { showResponse({ error: e.message }); }
         };
 
+        // Login
         document.getElementById('btn-login').onclick = async () => {
             const body = {
                 email: document.getElementById('login-email').value,
@@ -254,50 +275,49 @@
                 const res = await fetch(`${baseUrl}/auth/login`, {
                     method: 'POST',
                     headers: getHeaders(),
-                    credentials: 'include', // WAJIB
+                    credentials: 'include',
                     body: JSON.stringify(body)
                 });
                 const data = await res.json();
 
-                // DIUBAH: Cek data.user, bukan data.token
                 if (res.ok && data.user) {
                     userInfoEl.textContent =
-                        `User ID: ${data.user.userId}\n` +
+                        `ID: ${data.user.userId}\n` +
                         `Email: ${data.user.email}\n` +
-                        `Role: ${data.user.role.toUpperCase()}`;
-                    showResponse({ message: "LOGIN BERHASIL. Session cookie diterima.", userInfo: data.user });
+                        `Role: ${data.user.role}`;
+                    showResponse({ message: "Login Berhasil & Cookie Tersimpan", user: data.user });
                 } else {
-                    userInfoEl.textContent = "Login gagal.";
+                    userInfoEl.textContent = "Gagal Login";
                     showResponse(data);
                 }
             } catch (e) {
-                userInfoEl.textContent = "Error saat login.";
+                userInfoEl.textContent = "Error";
                 showResponse({ error: e.message });
             }
         };
 
-        // BARU: Event listener untuk Logout
+        // Logout
         document.getElementById('btn-logout').onclick = async () => {
             try {
                 const res = await fetch(`${baseUrl}/auth/logout`, {
                     method: 'POST',
                     headers: getHeaders(),
-                    credentials: 'include' // WAJIB
+                    credentials: 'include'
                 });
                 const data = await res.json();
-                if (res.ok) {
-                    userInfoEl.textContent = "Anda telah logout.";
-                }
+                if (res.ok) userInfoEl.textContent = "Logout Berhasil";
                 showResponse(data);
             } catch (e) { showResponse({ error: e.message }); }
         };
 
-        // --- 2. CUSTOMER: PRODUCTS ---
+        // --- 2. PRODUCTS ---
+
         document.getElementById('btn-get-products').onclick = async () => {
             try {
+                // Sesuai route: router.get('/search', ...)
                 const res = await fetch(`${baseUrl}/products/search`, {
                     method: 'GET',
-                    credentials: 'include' // WAJIB
+                    credentials: 'include'
                 });
                 showResponse(await res.json());
             } catch (e) { showResponse({ error: e.message }); }
@@ -305,30 +325,29 @@
 
         document.getElementById('btn-get-product-by-id').onclick = async () => {
             const prodId = document.getElementById('prod-id').value;
-            if (!prodId) {
-                showResponse({ error: "Masukkan ID Produk" });
-                return;
-            }
+            if (!prodId) return showResponse({ error: "ID Produk kosong" });
             try {
+                // Sesuai route: router.get('/search/:id', ...)
                 const res = await fetch(`${baseUrl}/products/search/${prodId}`, {
                     method: 'GET',
-                    credentials: 'include' // WAJIB
+                    credentials: 'include'
                 });
                 showResponse(await res.json());
             } catch (e) { showResponse({ error: e.message }); }
         };
 
-        // --- 2. CUSTOMER: CART ---
+        // --- 3. CART ---
+
         document.getElementById('btn-add-cart').onclick = async () => {
             const body = {
-                id_produk: parseInt(document.getElementById('cart-prod-id').value, 10),
-                qty: parseInt(document.getElementById('cart-qty').value, 10)
+                id_produk: parseInt(document.getElementById('cart-prod-id').value),
+                qty: parseInt(document.getElementById('cart-qty').value)
             };
             try {
                 const res = await fetch(`${baseUrl}/cart/items`, {
                     method: 'POST',
                     headers: getHeaders(),
-                    credentials: 'include', // WAJIB
+                    credentials: 'include',
                     body: JSON.stringify(body)
                 });
                 showResponse(await res.json());
@@ -337,18 +356,14 @@
 
         document.getElementById('btn-cart-update').onclick = async () => {
             const prodId = document.getElementById('cart-prod-id').value;
-            const body = {
-                qty: parseInt(document.getElementById('cart-qty').value, 10)
-            };
-            if (!prodId) {
-                showResponse({ error: "Masukkan ID Produk di field keranjang" });
-                return;
-            }
+            const body = { qty: parseInt(document.getElementById('cart-qty').value) };
+            if (!prodId) return showResponse({ error: "ID Produk kosong" });
+
             try {
                 const res = await fetch(`${baseUrl}/cart/items/${prodId}`, {
                     method: 'PATCH',
                     headers: getHeaders(),
-                    credentials: 'include', // WAJIB
+                    credentials: 'include',
                     body: JSON.stringify(body)
                 });
                 showResponse(await res.json());
@@ -357,15 +372,13 @@
 
         document.getElementById('btn-cart-delete').onclick = async () => {
             const prodId = document.getElementById('cart-prod-id').value;
-            if (!prodId) {
-                showResponse({ error: "Masukkan ID Produk di field keranjang" });
-                return;
-            }
+            if (!prodId) return showResponse({ error: "ID Produk kosong" });
+
             try {
                 const res = await fetch(`${baseUrl}/cart/items/${prodId}`, {
                     method: 'DELETE',
                     headers: getHeaders(),
-                    credentials: 'include' // WAJIB
+                    credentials: 'include'
                 });
                 showResponse(await res.json());
             } catch (e) { showResponse({ error: e.message }); }
@@ -375,20 +388,20 @@
             try {
                 const res = await fetch(`${baseUrl}/cart`, {
                     method: 'GET',
-                    headers: getHeaders(),
-                    credentials: 'include' // WAJIB
+                    credentials: 'include'
                 });
                 showResponse(await res.json());
             } catch (e) { showResponse({ error: e.message }); }
         };
 
-        // --- 2. CUSTOMER: ORDERS ---
+        // --- 4. ORDERS ---
+
         document.getElementById('btn-checkout').onclick = async () => {
             try {
                 const res = await fetch(`${baseUrl}/orders`, {
                     method: 'POST',
                     headers: getHeaders(),
-                    credentials: 'include' // WAJIB
+                    credentials: 'include'
                 });
                 const data = await res.json();
                 if (res.ok && data.id_pesanan) {
@@ -399,16 +412,12 @@
         };
 
         document.getElementById('btn-get-order-detail').onclick = async () => {
-            const orderid = document.getElementById('order-id').value;
-            if (!orderid) {
-                showResponse({ error: 'Silakan masukkan Order ID' });
-                return;
-            }
+            const orderId = document.getElementById('order-id').value;
+            if(!orderId) return showResponse({error: "ID Pesanan kosong"});
             try {
-                const res = await fetch(`${baseUrl}/orders/get/${orderid}`, {
+                const res = await fetch(`${baseUrl}/orders/get/${orderId}`, {
                     method: 'GET',
-                    headers: getHeaders(),
-                    credentials: 'include' // WAJIB
+                    credentials: 'include'
                 });
                 showResponse(await res.json());
             } catch (e) { showResponse({ error: e.message }); }
@@ -417,14 +426,9 @@
         document.getElementById('btn-add-payment').onclick = async () => {
             const orderId = document.getElementById('order-id').value;
             const method = document.getElementById('pay-method').value;
-            if (!orderId) {
-                showResponse({ error: 'ID Pesanan harus diisi' });
-                return;
-            }
-            if (!method) {
-                showResponse({ error: 'Metode pembayaran harus dipilih' });
-                return;
-            }
+            if (!orderId) return showResponse({ error: 'ID Pesanan harus diisi' });
+            if (!method) return showResponse({ error: 'Metode pembayaran harus dipilih' });
+
             const body = {
                 method: method,
                 amount: parseFloat(document.getElementById('pay-amount').value)
@@ -433,27 +437,29 @@
                 const res = await fetch(`${baseUrl}/orders/${orderId}/payments`, {
                     method: 'POST',
                     headers: getHeaders(),
-                    credentials: 'include', // WAJIB
+                    credentials: 'include',
                     body: JSON.stringify(body)
                 });
                 showResponse(await res.json());
             } catch (e) { showResponse({ error: e.message }); }
         };
 
-        // --- 3. ADMIN ---
+        // --- 5. ADMIN PRODUCT ---
+
         document.getElementById('btn-admin-add-prod').onclick = async () => {
             const body = {
                 nama: document.getElementById('admin-prod-nama').value,
                 kategori: document.getElementById('admin-prod-kategori').value,
                 deskripsi: document.getElementById('admin-prod-desk').value,
                 harga: parseFloat(document.getElementById('admin-prod-harga').value),
-                stok: parseInt(document.getElementById('admin-prod-stok').value, 10)
+                stok: parseInt(document.getElementById('admin-prod-stok').value),
+                gambar: document.getElementById('admin-prod-gambar').value || null
             };
             try {
                 const res = await fetch(`${baseUrl}/products`, {
                     method: 'POST',
                     headers: getHeaders(),
-                    credentials: 'include', // WAJIB
+                    credentials: 'include',
                     body: JSON.stringify(body)
                 });
                 showResponse(await res.json());
@@ -462,24 +468,26 @@
 
         document.getElementById('btn-admin-update-prod').onclick = async () => {
             const prodId = document.getElementById('admin-prod-id').value;
-            if (!prodId) {
-                showResponse({ error: "Masukkan ID Produk di panel Admin" });
-                return;
-            }
+            if (!prodId) return showResponse({ error: "ID Produk kosong" });
+
             const body = {};
             const nama = document.getElementById('admin-prod-nama').value;
             const deskripsi = document.getElementById('admin-prod-desk').value;
             const harga = document.getElementById('admin-prod-harga').value;
             const stok = document.getElementById('admin-prod-stok').value;
+            const gambar = document.getElementById('admin-prod-gambar').value;
+
             if (nama) body.nama = nama;
             if (deskripsi) body.deskripsi = deskripsi;
             if (harga) body.harga = parseFloat(harga);
-            if (stok) body.stok = parseInt(stok, 10);
+            if (stok) body.stok = parseInt(stok);
+            if (gambar) body.gambar = gambar;
+
             try {
                 const res = await fetch(`${baseUrl}/products/${prodId}`, {
                     method: 'PATCH',
                     headers: getHeaders(),
-                    credentials: 'include', // WAJIB
+                    credentials: 'include',
                     body: JSON.stringify(body)
                 });
                 showResponse(await res.json());
@@ -488,27 +496,24 @@
 
         document.getElementById('btn-admin-delete-prod').onclick = async () => {
             const prodId = document.getElementById('admin-prod-id').value;
-            if (!prodId) {
-                showResponse({ error: "Masukkan ID Produk di panel Admin" });
-                return;
-            }
+            if (!prodId) return showResponse({ error: "ID Produk kosong" });
+
             try {
                 const res = await fetch(`${baseUrl}/products/${prodId}`, {
                     method: 'DELETE',
-                    headers: getHeaders(),
-                    credentials: 'include' // WAJIB
+                    credentials: 'include'
                 });
                 showResponse(await res.json());
             } catch (e) { showResponse({ error: e.message }); }
         };
 
-        // --- 3. USER ---
+        // --- 6. USER MANAGEMENT ---
+
         document.getElementById('btn-user-get-all').onclick = async () => {
             try {
                 const res = await fetch(`${baseUrl}/users`, {
                     method: 'GET',
-                    headers: getHeaders(),
-                    credentials: 'include' // WAJIB
+                    credentials: 'include'
                 });
                 showResponse(await res.json());
             } catch (e) { showResponse({ error: e.message }); }
@@ -516,15 +521,11 @@
 
         document.getElementById('btn-user-get').onclick = async () => {
             const userId = document.getElementById('user-id').value;
-            if (!userId) {
-                showResponse({ error: "Masukkan User ID" });
-                return;
-            }
+            if (!userId) return showResponse({ error: "User ID Kosong" });
             try {
                 const res = await fetch(`${baseUrl}/users/${userId}`, {
                     method: 'GET',
-                    headers: getHeaders(),
-                    credentials: 'include' // WAJIB
+                    credentials: 'include'
                 });
                 showResponse(await res.json());
             } catch (e) { showResponse({ error: e.message }); }
@@ -532,13 +533,11 @@
 
         document.getElementById('btn-user-update').onclick = async () => {
             const userId = document.getElementById('user-id').value;
-            if (!userId) {
-                showResponse({ error: "Masukkan User ID" });
-                return;
-            }
+            if (!userId) return showResponse({ error: "User ID Kosong" });
+
             const body = {};
-            const nama = document.getElementById('user-nama').value;
-            const email = document.getElementById('user-email').value;
+            const nama = document.getElementById('user-update-nama').value;
+            const email = document.getElementById('user-update-email').value;
             if (nama) body.nama = nama;
             if (email) body.email = email;
 
@@ -546,7 +545,7 @@
                 const res = await fetch(`${baseUrl}/users/update/${userId}`, {
                     method: 'PATCH',
                     headers: getHeaders(),
-                    credentials: 'include', // WAJIB
+                    credentials: 'include',
                     body: JSON.stringify(body)
                 });
                 showResponse(await res.json());

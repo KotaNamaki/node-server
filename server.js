@@ -65,7 +65,7 @@ app.use(express.json());
         });
 
         app.get('/', (req, res) => {
-            res.render('E-Commerce API (Session-based) is up and running!');
+            res.json('E-Commerce API (Session-based) is up and running!');
         });
 
         app.use('/products', ProductRoutes);
