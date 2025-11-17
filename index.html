@@ -201,9 +201,11 @@
 
 <script>
     // --- Konfigurasi ---
-    const baseUrl = 'http://localhost:3000/api'; // Pastikan ini alamat server Anda
-    // 'null' untuk tes dari file lokal
-    // Ganti 'http://127.0.0.1:5500' jika pakai Live Server
+    // Gunakan baseUrl dinamis: jika di localhost gunakan API lokal, selain itu gunakan domain produksi
+    const baseUrl = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+        ? 'http://localhost:3000/api'
+        : 'https://motodiv.store/api';
+    // 'null' untuk tes dari file lokal; tidak wajib digunakan di bawah
     const clientUrl = 'null';
 
     // --- Elemen DOM ---

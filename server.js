@@ -11,7 +11,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors({
-    origin: ['http://localhost', 'http://127.0.0.1:5500', 'https://motodiv.store', 'https://admin.motodiv.store', 'null'], // 'null' untuk file lokal
+    origin: ['http://localhost', 'http://127.0.0.1:5500', 'https://motodiv.store', 'https://admin.motodiv.store', 'null', 'https://api.motodiv.store'], // 'null' untuk file lokal
     methods: ['GET','POST','PATCH','DELETE'],
     credentials: true // PENTING: Izinkan cookies
 }));
@@ -68,13 +68,13 @@ app.use(express.json());
             res.render('E-Commerce API (Session-based) is up and running!');
         });
 
-        app.use('/api/products', ProductRoutes);
-        app.use('/api/users', UserRoutes);
-        app.use('/api/auth', AuthRoutes);
-        app.use('/api/cart', CartRoutes);
-        app.use('/api/orders', OrderRoutes);
-        app.use('/api/layanan', LayananRoutes);
-        app.use('/api/ulasan', UlasanRoutes);
+        app.use('/products', ProductRoutes);
+        app.use('/users', UserRoutes);
+        app.use('/auth', AuthRoutes);
+        app.use('/cart', CartRoutes);
+        app.use('/orders', OrderRoutes);
+        app.use('/layanan', LayananRoutes);
+        app.use('/ulasan', UlasanRoutes);
 
         app.listen(PORT, () => {
             console.log(`Server started on https://localhost:${PORT}`);
