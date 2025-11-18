@@ -2,6 +2,8 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 
+const helmet = require('helmet');
+
 const session = require('express-session');
 const MySQLStore = require('express-mysql-session')(session);
 const { getDbPool} = require('./database');
@@ -9,6 +11,27 @@ const { getDbPool} = require('./database');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+app.use(helmet());
+app.use(
+    helmet.contentSecurityPolicy({
+        directives: {
+            defaultSrc: ["self"],
+            scriptSrc: ["self", "unsafe-inline"],
+            imgSrc: ["self", "data:", "https:"],
+            objectSrc: ["none"],
+            upgradeInsecureRequest: [],
+        },
+    })
+);
+
+app.use((req,res,next) => {
+    const host = req.headers.host;
+    if (host && host.includes('169.254.169.254')) {
+        return res.status(403).send('Forbidden');
+    }
+    next();
+});
 
 app.use(cors({
     origin: ['http://localhost', 'http://127.0.0.1:5500', 'https://motodiv.store', 'https://admin.motodiv.store', 'null', 'https://api.motodiv.store'], // 'null' untuk file lokal
