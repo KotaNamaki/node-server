@@ -237,8 +237,34 @@
     const getHeaders = () => {
         return { 'Content-Type': 'application/json' };
     };
+    async function autoCheckLogin() {
+        try {
+            const res = await fetch(`${baseUrl}/auth/check`, {
+                method: 'GET',
+                credentials: 'include' // PENTING: Kirim cookie session
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                // Update UI seolah-olah baru saja login
+                userInfoEl.textContent =
+                    `ID: ${data.user.userId}\n` +
+                    `Email: ${data.user.email}\n` +
+                    `Role: ${data.user.role}`;
+
+                document.getElementById('connection-status').textContent = "Terhubung & Sudah Login";
+                console.log("User sudah login, form login bisa disembunyikan.");
+
+                // Opsional: Sembunyikan form login / Redirect ke dashboard
+                // document.getElementById('login-fieldset').style.display = 'none';
+            }
+        } catch (e) {
+            console.log("Belum login atau sesi habis.");
+        }
+    }
 
     document.addEventListener('DOMContentLoaded', () => {
+        autoCheckLogin();
 
         // --- 1. AUTHENTICATION ---
 
@@ -311,7 +337,10 @@
 
         document.getElementById('btn-get-products').onclick = async () => {
             try {
-                // Sesuai route: router.get('/search', ...)
+                // SALAH:
+                // const res = await fetch(`${baseUrl}/products/search`, {
+
+                // BENAR (Hapus '/search'):
                 const res = await fetch(`${baseUrl}/products/search`, {
                     method: 'GET',
                     credentials: 'include'

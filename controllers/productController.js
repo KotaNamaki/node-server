@@ -19,7 +19,21 @@ const getProductById = async (req, res) => {
         if (rows.length === 0) {
             return res.status(404).json({ message: 'Product not found.' });
         }
-        res.json(rows[0]);
+        const product = rows[0];
+        try {
+            // Cek jika gambar berupa string array "['a.jpg', 'b.jpg']"
+            if (product.gambar && product.gambar.startsWith('[')) {
+                product.gambar = JSON.parse(product.gambar);
+            } else if (product.gambar) {
+                // Jika data lama (cuma 1 file string biasa), jadikan array juga biar konsisten
+                product.gambar = [product.gambar];
+            }
+        } catch (e) {
+            console.error("Error parsing gambar:", e);
+            product.gambar = []; // Default jika error
+        }
+        res.json(product);
+
     } catch (error) {
         console.error(`Failed to fetch product ${req.params.id}:`, error);
         res.status(500).json({ message: 'Error fetching product.' });

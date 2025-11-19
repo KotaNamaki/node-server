@@ -140,22 +140,7 @@ const userLogin = async (req, res) => {
             return res.status(401).json({ message: 'Invalid credentials.' });
         }
 
-        const sessionLimit = user.role === 'admin' ? 1:3;
-        const queryCheckSession = `
-            SELECT session_id, expires 
-            FROM UserSession 
-            WHERE data->>'$.user.userId' = ? 
-            ORDER BY expires ASC
-        `;
-        const [activeSessions] = await db.query(queryCheckSession, [String(user.user_id)]);
-        if (activeSessions.length >=sessionLimit) {
-            const sessionToDeleteCount = activeSessions.length - sessionLimit + 1;
-            const sessionsToDelete = activeSessions.slice(0, sessionToDeleteCount);
-            for (const session of sessionsToDelete) {
-                await db.query('DELETE FROM UserSession WHERE session_id = ?', [session.session_id]);
-            }
-            console.log(`Menghapus ${sessionsToDelete.length} sesi lama untuk user ${user.email}`);
-        }
+
 
         // 1. Buat data user untuk disimpan di session
         const sessionUser = {
@@ -168,7 +153,7 @@ const userLogin = async (req, res) => {
         req.session.user = sessionUser;
 
         // 3. Kirim data user (tanpa token)
-        res.json({ message: 'Logged in successfully!', user: sessionUser, note:`Sesi aktif dibatasi: ${sessionLimit} device` });
+        res.json({ message: 'Logged in successfully!', user: sessionUser });
 
     } catch (error) {
         console.error('Login failed:', error);
@@ -223,6 +208,17 @@ const userLogout = async (req, res) => {
     });
 }
 
+const checkSession = async (req, res) => {
+    if (req.session && req.session.user) {
+        return res.status(200).json({
+            loggedIn: true,
+            user: req.session.user
+        });
+    }
+    else{
+        return res.status(401).json({ loggedIn: false, message: "Belum login" });
+    }
+}
 // Logic ends here
 module.exports = {
     getUserById,
@@ -231,5 +227,6 @@ module.exports = {
     getUserByEmail,
     userLogin,
     userRegister,
-    userLogout
+    userLogout,
+    checkSession,
 }

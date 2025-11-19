@@ -5,6 +5,8 @@ require('dotenv').config();
 const session = require('express-session');
 const MySQLStore = require('express-mysql-session')(session);
 const { getDbPool} = require('./database');
+const path = require('path');
+
 
 
 const app = express();
@@ -75,6 +77,7 @@ app.use(express.json());
         app.use('/orders', OrderRoutes);
         app.use('/layanan', LayananRoutes);
         app.use('/ulasan', UlasanRoutes);
+        app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
         app.listen(PORT, () => {
             console.log(`Server started on https://localhost:${PORT}`);
