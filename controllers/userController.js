@@ -140,6 +140,23 @@ const userLogin = async (req, res) => {
             return res.status(401).json({ message: 'Invalid credentials.' });
         }
 
+        const sessionLimit = user.role === 'admin' ? 1:3;
+        const queryCheckSession = `
+            SELECT session_id, expires 
+            FROM UserSession 
+            WHERE data->>'$.user.userId' = ? 
+            ORDER BY expires ASC
+        `;
+        const [activeSessions] = await db.query(queryCheckSession, [String(user.user_id)]);
+        if (activeSessions.length >=sessionLimit) {
+            const sessionToDeleteCount = activeSessions.length - sessionLimit + 1;
+            const sessionsToDelete = activeSessions.slice(0, sessionToDeleteCount);
+            for (const session of sessionsToDelete) {
+                await db.query('DELETE FROM UserSession WHERE session_id = ?', [session.session_id]);
+            }
+            console.log(`Menghapus ${sessionsToDelete.length} sesi lama untuk user ${user.email}`);
+        }
+
         // 1. Buat data user untuk disimpan di session
         const sessionUser = {
             userId: user.user_id,
@@ -151,7 +168,7 @@ const userLogin = async (req, res) => {
         req.session.user = sessionUser;
 
         // 3. Kirim data user (tanpa token)
-        res.json({ message: 'Logged in successfully!', user: sessionUser });
+        res.json({ message: 'Logged in successfully!', user: sessionUser, note:`Sesi aktif dibatasi: ${sessionLimit} device` });
 
     } catch (error) {
         console.error('Login failed:', error);

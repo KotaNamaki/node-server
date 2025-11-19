@@ -3,6 +3,8 @@ const cors = require('cors');
 require('dotenv').config();
 
 const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+const hpp = require('hpp');
 
 const session = require('express-session');
 const MySQLStore = require('express-mysql-session')(session);
@@ -40,6 +42,38 @@ app.use(cors({
 }));
 //whoops
 app.use(express.json());
+app.use(express.urlencoded({ extended: true}));
+app.use(hpp());
+
+const generalLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 menit
+    max: 100, // Maksimal 100 request per IP per 15 menit
+    message: 'Terlalu banyak request dari IP ini, silakan coba lagi nanti.',
+    standardHeaders: true,
+    legacyHeaders: false
+});
+
+app.use(generalLimiter);
+
+app.use(session({
+    key: 'sessionId',
+    secret: process.env.SESSION_SECRET || 'rahasia',
+    store: sessionStore,
+    resave: false, // Ubah ke false untuk efisiensi (recommended)
+    saveUninitialized: false,
+    cookie: {
+        httpOnly: true, // PENTING: Agar JS di browser tidak bisa baca cookie (Anti-XSS)
+
+        // Ubah logika ini: Jika production (motodiv.store), wajib true. Localhost boleh false.
+        secure: process.env.NODE_ENV === 'production',
+
+        // PENTING: Mencegah CSRF (Cross-Site Request Forgery)
+        // 'Lax' berarti cookie hanya dikirim saat user navigasi ke situs Anda, bukan dari iframe situs lain.
+        sameSite: process.env.NODE_ENV === 'production' ? 'lax' : 'lax',
+
+        maxAge: 1000 * 60 * 60 * 24 // 1 Hari
+    }
+}));
 
 // --- Memuat Routes ---
 (async () => {
