@@ -5,35 +5,32 @@ const getProductById = async (req, res) => {
     try {
         const { id } = req.params;
         const db = await getDbPool();
-        const query = `
-        SELECT 
-          id_produk , 
-          nama , 
-          deskripsi , 
-          harga , 
-          stok , 
-          gambar
-        FROM Produk 
-        WHERE id_produk = ?`;
+        const query = `SELECT * FROM Produk WHERE id_produk = ?`;
         const [rows] = await db.query(query, [id]);
+
         if (rows.length === 0) {
             return res.status(404).json({ message: 'Product not found.' });
         }
+
         const product = rows[0];
-        try {
-            // Cek jika gambar berupa string array "['a.jpg', 'b.jpg']"
-            if (product.gambar && product.gambar.startsWith('[')) {
-                product.gambar = JSON.parse(product.gambar);
-            } else if (product.gambar) {
-                // Jika data lama (cuma 1 file string biasa), jadikan array juga biar konsisten
+
+        // LOGIKA AMAN SAMA SEPERTI DI ATAS
+        if (!product.gambar) {
+            product.gambar = [];
+        } else {
+            try {
+                if (typeof product.gambar === 'string' && product.gambar.trim().startsWith('[')) {
+                    const parsed = JSON.parse(product.gambar);
+                    product.gambar = Array.isArray(parsed) ? parsed : [parsed];
+                } else {
+                    product.gambar = [product.gambar];
+                }
+            } catch (e) {
                 product.gambar = [product.gambar];
             }
-        } catch (e) {
-            console.error("Error parsing gambar:", e);
-            product.gambar = []; // Default jika error
         }
-        res.json(product);
 
+        res.json(product);
     } catch (error) {
         console.error(`Failed to fetch product ${req.params.id}:`, error);
         res.status(500).json({ message: 'Error fetching product.' });
@@ -133,20 +130,42 @@ const getProductAll = async (req, res) => {
     try {
         const db = await getDbPool();
         const query = `
-        SELECT 
-            id_produk,
-            nama, 
-            deskripsi,
-            harga,
-            stok,
-            gambar
-        FROM Produk
-        WHERE stok >= 0`;
+            SELECT id_produk, nama, deskripsi, harga, stok, gambar
+            FROM Produk
+            WHERE stok >= 0`; // Sesuaikan query jika perlu
+
         const [rows] = await db.query(query);
-        res.json(rows);
+
+        // LOGIKA AMAN UNTUK MEMPROSES GAMBAR
+        const products = rows.map(product => {
+            // 1. Jika gambar kosong/null
+            if (!product.gambar) {
+                product.gambar = [];
+                return product;
+            }
+
+            // 2. Coba Parse sebagai JSON (Format Baru: '["img1.jpg"]')
+            try {
+                // Cek sekilas apakah terlihat seperti array string
+                if (typeof product.gambar === 'string' && product.gambar.trim().startsWith('[')) {
+                    const parsed = JSON.parse(product.gambar);
+                    product.gambar = Array.isArray(parsed) ? parsed : [parsed];
+                } else {
+                    // 3. Jika bukan JSON (Format Lama: 'img1.jpg'), masukkan ke array
+                    product.gambar = [product.gambar];
+                }
+            } catch (e) {
+                // Fallback jika error parsing, anggap string biasa
+                console.log('Gagal parse gambar produk ID:', product.id_produk);
+                product.gambar = [product.gambar];
+            }
+            return product;
+        });
+
+        res.json(products);
     } catch (error) {
         console.error('Gagal mencari produk:', error);
-        res.status(500).json({ message: 'Server Error Fetching product from database.' });
+        res.status(500).json({ message: 'Server Error Fetching products.' });
     }
 };
 
