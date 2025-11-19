@@ -218,11 +218,8 @@
 <script>
     // --- KONFIGURASI URL ---
     // Logic: Jika localhost, gunakan port 3000. Jika tidak, tembak ke subdomain api.
-    const isLocalhost = (location.hostname === 'localhost' || location.hostname === '127.0.0.1');
-    const baseUrl = isLocalhost
-        ? 'http://localhost:3000'
-        : 'https://api.motodiv.store';
 
+    const baseUrl = 'http://localhost:3000';
     // Tampilkan URL target untuk debug
     document.getElementById('target-url-display').textContent = baseUrl;
     document.getElementById('connection-status').textContent = `Target: ${baseUrl}`;

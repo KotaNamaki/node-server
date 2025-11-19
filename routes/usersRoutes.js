@@ -3,11 +3,9 @@ const userController = require('../controllers/userController');
 const router = express.Router();
 const {authReq, adminReq} = require('../middleware/authMiddleWare');
 
-router.use(authReq, adminReq);
-
 // Pemetaan URL ke ke fungsi router
-router.get('/:id', userController.getUserById);
-router.get('/', userController.getUser);
-router.patch('/update/:id', userController.updateUser);
+router.get('/:id', authReq, userController.getUserById);
+router.get('/',authReq, adminReq, userController.getUser);
+router.patch('/update/:id', authReq, adminReq, userController.updateUser);
 
 module.exports = router;
