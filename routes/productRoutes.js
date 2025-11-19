@@ -1,13 +1,28 @@
+// routes/productRoutes.js
 const express = require('express');
 const router = express.Router();
 const productController = require('../controllers/productController');
-const {authReq, adminReq} = require('../middleware/authMiddleWare');
 
-router.get('/search/:id', productController.getProductById);
-router.get('/search', productController.getProductAll);
+// 1. Import Middleware Upload (PENTING: Tanpa { } )
+const upload = require('../middleware/uploadMiddleware');
 
+// 2. Import Auth jika diperlukan (sesuai stack trace error Anda)
+const { authReq, adminReq } = require('../middleware/authMiddleWare');
 
-router.post('/', authReq, adminReq, productController.addProduct);
+// Route Get (Public)
+router.get('/', productController.getProductAll);
+router.get('/:id', productController.getProductById);
+
+// Route Add Product (Admin Only + Upload)
+// URUTAN PENTING: Auth -> Admin -> Upload -> Controller
+router.post('/',
+    authReq,
+    adminReq,
+    upload.array('gambar', 5), // <--- Middleware ini yang mengisi req.body
+    productController.addProduct
+);
+
+// Route Update & Delete (Admin Only)
 router.patch('/:id', authReq, adminReq, productController.updateProduct);
 router.delete('/:id', authReq, adminReq, productController.deleteProduct);
 

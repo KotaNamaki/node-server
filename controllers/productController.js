@@ -54,7 +54,7 @@ const updateProduct = async (req, res) => {
         }
         if (fields.length === 0) {
             return res.status(404).json({ message: 'No changes found, allowed are: nama, deskripsi, harga, stok, gambar' });
-        };
+        }
         const db = await getDbPool();
 
         const [existing] = await db.query('SELECT id_produk FROM Produk WHERE id_produk = ?', [id]);
@@ -74,7 +74,16 @@ const updateProduct = async (req, res) => {
 
 const addProduct = async (req, res) => {
     try {
-        const { nama, kategori, deskripsi, harga, stok, gambar } = req.body;
+        const { nama, kategori, deskripsi, harga, stok } = req.body;
+        // Validasi file tidak boleh kosong
+        if (!req.files || req.files.length === 0) {
+            return res.status(400).json({ message: 'Minimal 1 gambar wajib diupload!' });
+        }
+
+        // Ambil semua nama file dan jadikan JSON String: '["img1.jpg", "img2.jpg"]'
+        const filenames = req.files.map(file => file.filename);
+        const gambarString = JSON.stringify(filenames);
+
 
         // PERBAIKAN 1: Validasi disesuaikan (hanya cek yang wajib)
         if (!nama || !kategori || !deskripsi || !harga) {
@@ -92,12 +101,13 @@ const addProduct = async (req, res) => {
         // Insert produk baru
         const [result] = await db.query(
             'INSERT INTO Produk (nama, kategori, deskripsi, harga, stok, gambar) VALUES (?, ?, ?, ?, ?, ?)',
-            [nama, kategori, deskripsi, harga, stok, gambar]
+            [nama, kategori, deskripsi, harga, stok, gambarString]
         );
 
         res.status(201).json({
             message: 'Produk telah dimasukkan',
-            produkID: result.insertId
+            produkID: result.insertId,
+            files: filenames
         });
     } catch (error) {
         console.error('Gagal menambah produk:', error);
