@@ -40,28 +40,20 @@ const getProductById = async (req, res) => {
 const updateProduct = async (req, res) => {
     try {
         const { id } = req.params;
-        const { nama, deskripsi, harga, stok, gambar } = req.body || {};
+        const { nama, deskripsi, harga, stok} = req.body || {};
         const fields  = [];
         const values = [];
-        if (nama !== undefined ) {
-            fields.push('nama = ?');
-            values.push(nama);
-        }
-        if (deskripsi !== undefined ) {
-            fields.push('deskripsi = ?');
-            values.push(deskripsi);
-        }
-        if (harga !== undefined ) {
-            fields.push('harga = ?');
-            values.push(harga);
-        }
-        if (stok !== undefined ) {
-            fields.push('stok = ?');
-            values.push(stok);
-        }
-        if (gambar !== undefined ) {
+
+        if (nama) { fields.push('nama = ?'); values.push(nama); }
+        if (deskripsi) { fields.push('deskripsi = ?'); values.push(deskripsi); }
+        if (harga) { fields.push('harga = ?'); values.push(harga); }
+        if (stok) { fields.push('stok = ?'); values.push(stok); }
+
+        if (req.files && req.files.length > 0) {
+            const filenames = req.files.map(file => file.filename);
             fields.push('gambar = ?');
-            values.push(gambar);
+            // Simpan sebagai JSON String: '["img1.jpg", "img2.jpg"]'
+            values.push(JSON.stringify(filenames));
         }
         if (fields.length === 0) {
             return res.status(404).json({ message: 'No changes found, allowed are: nama, deskripsi, harga, stok, gambar' });
@@ -75,8 +67,19 @@ const updateProduct = async (req, res) => {
         const sql = `UPDATE Produk SET ${fields.join(', ')} WHERE id_produk = ?`;
         await db.query(sql, [...values, id]);
 
-        const [rows] = await db.query('SELECT id_produk, nama, deskripsi, harga, stok, gambar FROM Produk WHERE id_produk = ?', [id]);
-        return res.json({message: 'Produk sudah terupdate sukses!', user: rows[0]});
+        const [rows] = await db.query('SELECT * FROM Produk WHERE id_produk = ?', [id]);
+        let updatedProd = rows[0];
+        try {
+            if (updatedProd.gambar && updatedProd.gambar.startsWith('[')) {
+                updatedProd.gambar = JSON.parse(updatedProd.gambar);
+            }
+        } catch(e) {
+            console.log(e)
+        }
+        return res.json({
+            message: 'Produk berhasil diupdate!',
+            user: updatedProd
+        });
     }catch (error) {
         console.error(`Failed to update product ${req.params.id}:`, error);
         return res.status(500).json({message:'Error updating product '+req.params.id});

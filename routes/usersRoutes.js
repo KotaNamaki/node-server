@@ -6,6 +6,6 @@ const {authReq, adminReq} = require('../middleware/authMiddleWare');
 // Pemetaan URL ke ke fungsi router
 router.get('/:id', authReq, userController.getUserById);
 router.get('/',authReq, adminReq, userController.getUser);
-router.patch('/update/:id', authReq, adminReq, userController.updateUser);
+router.patch('/update/:id', authReq, userController.updateUser);
 
 module.exports = router;

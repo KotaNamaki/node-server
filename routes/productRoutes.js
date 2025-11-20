@@ -23,7 +23,12 @@ router.post('/',
 );
 
 // Route Update & Delete (Admin Only)
-router.patch('/:id', authReq, adminReq, productController.updateProduct);
+router.patch('/:id',
+    authReq,
+    adminReq,
+    upload.array('gambar', 5), // Tambahkan ini
+    productController.updateProduct
+);
 router.delete('/:id', authReq, adminReq, productController.deleteProduct);
 
 module.exports = router;
