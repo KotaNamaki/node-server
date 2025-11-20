@@ -8,7 +8,7 @@ Dokumentasi ini mencakup daftar endpoint API yang tersedia serta panduan cara me
 * **Content-Type:** application/json (Kecuali upload file menggunakan multipart/form-data)
 * **Authentication:** Session Cookies (httpOnly).
 * **Syarat Frontend:** Wajib menyertakan withCredentials: true pada setiap request.
-* **Akses Gambar:** http://localhost:3000/uploads/\<nama\_file\>
+* **Akses Gambar:** http://localhost:3000/uploads/<nama\_file\>
 
 ## **🔌 Daftar API Endpoints**
 
