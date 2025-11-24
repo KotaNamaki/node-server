@@ -1,162 +1,163 @@
-# **Dokumentasi API & Panduan Integrasi Frontend (MotoDiv)**
+# API Documentation — Quick Guide
 
-Dokumentasi ini mencakup daftar endpoint API yang tersedia serta panduan cara mengintegrasikannya ke dalam aplikasi Frontend (React/Vue/dll) menggunakan Axios.
+## 1) What API is this
 
-## **📋 Informasi Dasar**
+A Node.js (Express) REST API for an e-commerce/service app named MotoDiv. It covers authentication, products (with image uploads), carts, orders and payments, services (layanan), reviews (ulasan), and user profiles.
 
-* **Base URL:** http://localhost:3000
-* **Content-Type:** application/json (Kecuali upload file menggunakan multipart/form-data)
-* **Authentication:** Session Cookies (httpOnly).
-* **Syarat Frontend:** Wajib menyertakan withCredentials: true pada setiap request.
-* **Akses Gambar:** http://localhost:3000/uploads/<nama\_file\>
+## 2) What its function is
 
-## **🔌 Daftar API Endpoints**
+- Authenticate users and maintain session-based login
+- Manage product catalog with image upload/storage
+- Let users manage carts and place orders, with payment step
+- Manage service offerings (layanan)
+- Allow customers to create/read product reviews
+- Read and update user profile data
 
-### **1\. Authentication (/auth)**
+## 3) How it functions
 
-| Method | Endpoint | Body (JSON) | Deskripsi |
-| :---- | :---- | :---- | :---- |
-| POST | /auth/login | { "email": "...", "password": "..." } | Login user & set session cookie |
-| POST | /auth/register | { "nama": "...", "email": "...", "password": "...", "no\_hp": "..." } | Registrasi user baru |
-| GET | /auth/check-session | \- | Cek status login (dipanggil saat load app) |
-| POST | /auth/logout | \- | Hapus session & logout |
+- Base URL: http://localhost:3000
+- Auth: httpOnly session cookies (frontend must send withCredentials)
+- Database: MySQL via `mysql2`
+- Sessions: `express-mysql-session`
+- File uploads: `middleware/uploadMiddleware.js`; images are uploaded to Appwrite via `services/appwriteServices.js` and accessible through stored URLs
+- Access control: public endpoints (product browsing), authenticated endpoints (cart, orders, posting reviews), admin-only for create/update/delete on protected resources
 
-### **2\. Produk (/products)**
+## 4) How to use it
 
-| Method | Endpoint | Deskripsi | Catatan |
-| :---- | :---- | :---- | :---- |
-| GET | /products/search | Ambil semua produk | Public |
-| GET | /products/search/:id | Detail produk | Public |
-| POST | /products | Tambah produk | **Admin Only**. Gunakan **FormData** (bukan JSON) untuk upload gambar. |
-| PATCH | /products/:id | Update produk | **Admin Only**. Gunakan **FormData**. |
-| DELETE | /products/:id | Hapus produk | **Admin Only**. |
+- From a browser app, configure your HTTP client to send cookies.
+- Use `application/json` for normal requests; use `multipart/form-data` for endpoints that send files (e.g., create/update product).
 
-### **3\. Keranjang (/cart) \- Wajib Login**
-
-| Method | Endpoint | Body (JSON) | Deskripsi |
-| :---- | :---- | :---- | :---- |
-| GET | /cart | \- | Lihat isi keranjang user |
-| POST | /cart/items | { "id\_produk": 1, "qty": 2 } | Tambah item (qty diakumulasi jika ada) |
-| PATCH | /cart/items/:id | { "qty": 5 } | Ubah jumlah item tertentu |
-| DELETE | /cart/items/:id | \- | Hapus item dari keranjang |
-
-### **4\. Pesanan (/orders) \- Wajib Login**
-
-| Method | Endpoint | Body (JSON) | Deskripsi |
-| :---- | :---- | :---- | :---- |
-| POST | /orders | \- | Checkout (Ubah keranjang jadi pesanan) |
-| POST | /orders/:id/payments | { "method": "QRIS", "amount": 50000 } | Bayar pesanan. Method: QRIS, VA, DANA |
-| GET | /orders/get/:id | \- | Detail pesanan |
-| GET | /orders | \- | **Admin Only**. Semua history pesanan |
-| POST | /orders/:id/status | { "status": "diproses" } | **Admin Only**. Update status (pending, diproses, selesai) |
-
-### **5\. Layanan (/layanan)**
-
-| Method | Endpoint | Body (JSON) | Deskripsi |
-| :---- | :---- | :---- | :---- |
-| GET | /layanan | \- | List semua layanan |
-| POST | /layanan | { "nama\_layanan": "...", ... } | **Admin Only**. Tambah layanan |
-| DELETE | /layanan/:id | \- | **Admin Only**. Hapus layanan |
-
-### **6\. Ulasan (/ulasan)**
-
-| Method | Endpoint | Body (JSON) | Deskripsi |
-| :---- | :---- | :---- | :---- |
-| GET | /ulasan/produk/:id | \- | Lihat ulasan per produk |
-| POST | /ulasan | { "id\_produk": 1, "rating": 5, "komentar": "..." } | **Customer**. Tambah ulasan |
-
-### **7\. User Profile (/users)**
-
-| Method | Endpoint | Body (JSON) | Deskripsi |
-| :---- | :---- | :---- | :---- |
-| GET | /users/:id | \- | Lihat profil |
-| PATCH | /users/update/:id | { "nama": "...", "password": "..." } | Edit profil sendiri |
-
-## **💻 Panduan Integrasi Frontend**
-
-Gunakan kode berikut sebagai referensi service API menggunakan library **Axios**.
-
-### **1\. Setup Axios (Wajib)**
-
-Setting withCredentials: true sangat krusial agar cookie session tersimpan di browser.  
-````
+Axios setup example:
+```
 import axios from 'axios';
 
-const api \= axios.create({  
-baseURL: 'http://localhost:3000', // Sesuaikan dengan port backend  
-withCredentials: true, // PENTING: Agar session cookie terbaca  
-headers: {  
-'Content-Type': 'application/json'  
-}  
+export const api = axios.create({
+  baseURL: 'http://localhost:3000',
+  withCredentials: true,
+  headers: { 'Content-Type': 'application/json' }
 });
-````
-### **2\. Authentication Service**
+```
 
-Gunakan service ini untuk Login, Register, dan pengecekan sesi saat aplikasi dimuat.  
-````
-export const AuthService \= {  
-login: async (email, password) \=\> {  
-const res \= await api.post('/auth/login', { email, password });  
-return res.data;  
-},  
-register: async (userData) \=\> {  
-// userData: { nama, email, password, no\_hp }  
-const res \= await api.post('/auth/register', userData);  
-return res.data;  
-},  
-checkSession: async () \=\> {  
-try {  
-// Panggil ini di useEffect App.js  
-const res \= await api.get('/auth/check-session');  
-return res.data; // { loggedIn: true, user: ... }  
-} catch (error) {  
-return { loggedIn: false };  
-}  
-},  
-logout: async () \=\> {  
-await api.post('/auth/logout');  
-window.location.href \= '/login';  
-}  
-};
-````
-### **3\. Product Service (Upload Gambar)**
+## 5) Examples of each use
 
-Khusus untuk upload produk, gunakan FormData agar file gambar terkirim dengan benar.  
-````
-export const ProductService \= {  
-getAll: async () \=\> {  
-const res \= await api.get('/products/search');  
-return res.data;  
-},
+Authentication
+- Login
+```
+await api.post('/auth/login', { email: 'user@example.com', password: 'secret' });
+```
+- Check Session
+```
+await api.get('/auth/check-session');
+```
+- Register
+```
+await api.post('/auth/register', { nama: 'Budi', email: 'budi@example.com', password: 'secret', no_hp: '08123' });
+```
+- Logout
+```
+await api.post('/auth/logout');
+```
 
-    // CREATE PRODUCT (ADMIN)  
-    create: async (formData) \=\> {  
-        // Contoh penggunaan di component:  
-        // const data \= new FormData();  
-        // data.append('nama', 'Ban');  
-        // data.append('gambar', fileInput.files\[0\]);  
-          
-        // Header 'Content-Type' akan otomatis diatur oleh axios  
-        const res \= await api.post('/products', formData, {  
-            headers: { 'Content-Type': 'multipart/form-data' }  
-        });  
-        return res.data;  
-    },
+Products
+- List products
+```
+await api.get('/products/search');
+```
+- Product detail
+```
+await api.get('/products/search/1');
+```
+- Create product (admin, with image)
+```
+const data = new FormData();
+data.append('nama', 'Ban Premium');
+data.append('harga', 150000);
+data.append('gambar', fileInput.files[0]);
+await api.post('/products', data, { headers: { 'Content-Type': 'multipart/form-data' }});
+```
+- Update product (admin)
+```
+const data2 = new FormData();
+data2.append('nama', 'Ban Premium X');
+await api.patch('/products/1', data2, { headers: { 'Content-Type': 'multipart/form-data' }});
+```
+- Delete product (admin)
+```
+await api.delete('/products/1');
+```
 
-    delete: async (id) \=\> {  
-        return await api.delete(\`/products/${id}\`);  
-    }  
-};
-````
-### **4\. Helper URL Gambar**
+Cart (requires login)
+- Get cart
+```
+await api.get('/cart');
+```
+- Add item
+```
+await api.post('/cart/items', { id_produk: 1, qty: 2 });
+```
+- Update item qty
+```
+await api.patch('/cart/items/10', { qty: 5 });
+```
+- Remove item
+```
+await api.delete('/cart/items/10');
+```
 
-Gunakan fungsi helper sederhana ini untuk menampilkan gambar di \<img\>.  
-````
-export const getImageUrl \= (filename) \=\> {  
-if (\!filename) return '/placeholder.jpg'; // Gambar cadangan  
-return \`http://localhost:3000/uploads/${filename}\`;  
-};
+Orders (requires login)
+- Checkout
+```
+await api.post('/orders');
+```
+- Pay order
+```
+await api.post('/orders/123/payments', { method: 'QRIS', amount: 50000 });
+```
+- Order detail
+```
+await api.get('/orders/get/123');
+```
+- Admin: list all orders
+```
+await api.get('/orders');
+```
+- Admin: update status
+```
+await api.post('/orders/123/status', { status: 'diproses' });
+```
 
-// Contoh di JSX:  
-// \<img src={getImageUrl(item.gambar\[0\])} alt="Produk" /\>  
-````
+Services (Layanan)
+- List
+```
+await api.get('/layanan');
+```
+- Admin: create
+```
+await api.post('/layanan', { nama_layanan: 'Ganti Oli', harga: 75000 });
+```
+- Admin: delete
+```
+await api.delete('/layanan/5');
+```
+
+Reviews (Ulasan)
+- Get for a product
+```
+await api.get('/ulasan/produk/1');
+```
+- Create review (customer)
+```
+await api.post('/ulasan', { id_produk: 1, rating: 5, komentar: 'Mantap!' });
+```
+
+User Profile
+- Get profile
+```
+await api.get('/users/1');
+```
+- Update own profile
+```
+await api.patch('/users/update/1', { nama: 'Budi Update', password: 'newpass' });
+```
+
+---
