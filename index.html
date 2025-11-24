@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>API Tester - MotoDiv (With Image Support)</title>
+    <title>API Tester - MotoDiv (Appwrite Support)</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -345,11 +345,10 @@
             } catch (e) { showResponse({ error: e.message }); }
         };
 
-        // --- PRODUCTS (GET & DISPLAY IMAGES) ---
+        // --- PRODUCTS (GET & DISPLAY IMAGES - UPDATED) ---
         document.getElementById('btn-get-products').onclick = async () => {
             previewArea.innerHTML = '<em style="color:#666">Loading...</em>';
             try {
-                // Pastikan URL benar (tanpa /search jika route default)
                 const res = await fetch(`${baseUrl}/products/search`, {
                     method: 'GET',
                     credentials: 'include'
@@ -364,16 +363,24 @@
                         const card = document.createElement('div');
                         card.className = 'product-card';
 
-                        // Handle gambar (Array atau String)
+                        // LOGIC BARU: Support Appwrite URL (http) dan Legacy Local (nama file)
                         let imgSrc = 'https://via.placeholder.com/150?text=No+Image';
 
-                        // Logika: jika prod.gambar adalah array dan ada isinya
+                        // Array dari database (karena controller sudah fix)
                         if (Array.isArray(prod.gambar) && prod.gambar.length > 0) {
-                            // Ambil gambar pertama
-                            imgSrc = `${baseUrl}/uploads/${prod.gambar[0]}`;
+                            const rawImg = prod.gambar[0];
+                            if (rawImg.startsWith('http')) {
+                                imgSrc = rawImg; // Gunakan URL langsung (Appwrite)
+                            } else {
+                                imgSrc = `${baseUrl}/uploads/${rawImg}`; // Gunakan Local path (Legacy)
+                            }
                         } else if (typeof prod.gambar === 'string' && prod.gambar) {
-                            // Fallback jika backend kirim string
-                            imgSrc = `${baseUrl}/uploads/${prod.gambar}`;
+                            // Fallback jika masih string
+                            if (prod.gambar.startsWith('http')) {
+                                imgSrc = prod.gambar;
+                            } else {
+                                imgSrc = `${baseUrl}/uploads/${prod.gambar}`;
+                            }
                         }
 
                         card.innerHTML = `
@@ -395,11 +402,11 @@
             }
         };
 
+        // --- GET SINGLE PRODUCT (UPDATED) ---
         document.getElementById('btn-get-product-by-id').onclick = async () => {
             const prodId = document.getElementById('prod-id').value;
             if (!prodId) return showResponse({ error: "Masukkan ID Produk terlebih dahulu" });
 
-            // Tampilkan loading di area preview
             previewArea.innerHTML = '<em style="color:#666">Loading single product...</em>';
 
             try {
@@ -408,46 +415,46 @@
                     credentials: 'include'
                 });
                 const data = await res.json();
-                showResponse(data); // Tampilkan JSON mentah di kotak hitam
+                showResponse(data);
 
-                // --- LOGIKA RENDER GAMBAR ---
-                previewArea.innerHTML = ''; // Bersihkan area preview
+                previewArea.innerHTML = '';
 
-                // Cek jika error dari backend (misal ID tidak ketemu)
                 if (!res.ok || data.message) {
                     previewArea.innerHTML = `<div style="color:red">${data.message || 'Error'}</div>`;
                     return;
                 }
 
-                // Buat elemen kartu
                 const card = document.createElement('div');
                 card.className = 'product-card';
-                card.style.maxWidth = '250px'; // Batasi ukuran agar rapi
+                card.style.maxWidth = '250px';
 
-                // Logic URL Gambar (Support Array atau String)
+                // LOGIC BARU: Support Appwrite URL
                 let imgSrc = 'https://via.placeholder.com/150?text=No+Image';
+                let rawImg = null;
 
-                // 1. Jika data.gambar adalah Array (hasil dari backend yg sudah diperbaiki)
                 if (Array.isArray(data.gambar) && data.gambar.length > 0) {
-                    imgSrc = `${baseUrl}/uploads/${data.gambar[0]}`;
-                }
-                // 2. Jika data.gambar adalah String (hasil backend lama)
-                else if (typeof data.gambar === 'string' && data.gambar) {
-                    // Cek apakah stringnya format JSON "['img.jpg']" (jaga-jaga)
+                    rawImg = data.gambar[0];
+                } else if (typeof data.gambar === 'string' && data.gambar) {
+                    // Coba parse kalau JSON
                     if (data.gambar.startsWith('[')) {
                         try {
                             const parsed = JSON.parse(data.gambar);
-                            if (parsed.length > 0) imgSrc = `${baseUrl}/uploads/${parsed[0]}`;
-                        } catch (e) {
-                            // Gagal parse, anggap string biasa
-                            imgSrc = `${baseUrl}/uploads/${data.gambar}`;
-                        }
+                            if (parsed.length > 0) rawImg = parsed[0];
+                        } catch (e) { rawImg = data.gambar; }
                     } else {
-                        imgSrc = `${baseUrl}/uploads/${data.gambar}`;
+                        rawImg = data.gambar;
                     }
                 }
 
-                // Isi HTML Kartu
+                // Final check URL vs Local
+                if (rawImg) {
+                    if (rawImg.startsWith('http')) {
+                        imgSrc = rawImg;
+                    } else {
+                        imgSrc = `${baseUrl}/uploads/${rawImg}`;
+                    }
+                }
+
                 card.innerHTML = `
                     <img src="${imgSrc}" alt="${data.nama}" onerror="this.src='https://via.placeholder.com/150?text=Img+Error'">
                     <strong>${data.nama}</strong>
@@ -466,21 +473,16 @@
 
         // --- ADMIN ADD PRODUCT (MULTIPART/FORM-DATA) ---
         document.getElementById('btn-admin-add-prod').onclick = async () => {
-            // 1. Gunakan FormData untuk menangani File + Text
             const formData = new FormData();
-
-            // 2. Masukkan Text
             formData.append('nama', document.getElementById('admin-prod-nama').value);
             formData.append('kategori', document.getElementById('admin-prod-kategori').value);
             formData.append('deskripsi', document.getElementById('admin-prod-desk').value);
             formData.append('harga', document.getElementById('admin-prod-harga').value);
             formData.append('stok', document.getElementById('admin-prod-stok').value);
 
-            // 3. Masukkan File (Multiple)
             const fileInput = document.getElementById('admin-prod-file');
             if(fileInput.files.length > 0) {
                 for (let i = 0; i < fileInput.files.length; i++) {
-                    // Nama field harus 'gambar' sesuai backend: upload.array('gambar')
                     formData.append('gambar', fileInput.files[i]);
                 }
             }
@@ -488,8 +490,6 @@
             try {
                 const res = await fetch(`${baseUrl}/products`, {
                     method: 'POST',
-                    // JANGAN set 'Content-Type' header secara manual saat pakai FormData!
-                    // Browser akan otomatis set boundary.
                     credentials: 'include',
                     body: formData
                 });
@@ -498,8 +498,6 @@
         };
 
         // --- FITUR LAIN (CART, ORDER, USER) ---
-        // (Kode sama seperti sebelumnya, disederhanakan untuk hemat baris)
-
         document.getElementById('btn-add-cart').onclick = async () => {
             const body = { id_produk: document.getElementById('cart-prod-id').value, qty: document.getElementById('cart-qty').value };
             const res = await fetch(`${baseUrl}/cart/items`, { method: 'POST', headers: getHeaders(), credentials: 'include', body: JSON.stringify(body) });
@@ -537,7 +535,6 @@
             showResponse(await res.json());
         };
 
-        // Admin Update/Delete & User Mgmt (Sama seperti sebelumnya)
         document.getElementById('btn-admin-delete-prod').onclick = async () => {
             const id = document.getElementById('admin-prod-id').value;
             const res = await fetch(`${baseUrl}/products/${id}`, { method: 'DELETE', credentials: 'include' });
@@ -545,6 +542,35 @@
         };
         document.getElementById('btn-user-get-all').onclick = async () => {
             const res = await fetch(`${baseUrl}/users`, { method: 'GET', credentials: 'include' });
+            showResponse(await res.json());
+        };
+
+        // --- ADDED: Admin Update (Partial) Button Logic ---
+        document.getElementById('btn-admin-update-prod').onclick = async () => {
+            const id = document.getElementById('admin-prod-id').value;
+            if(!id) return showResponse({error: "Isi ID Produk untuk update"});
+
+            // Contoh update nama & harga saja (bisa dikembangkan formnya jika mau)
+            const namaBaru = document.getElementById('admin-prod-nama').value;
+            const hargaBaru = document.getElementById('admin-prod-harga').value;
+
+            const body = {};
+            if(namaBaru) body.nama = namaBaru;
+            if(hargaBaru) body.harga = hargaBaru;
+
+            const res = await fetch(`${baseUrl}/products/${id}`, {
+                method: 'PATCH',
+                headers: getHeaders(),
+                credentials: 'include',
+                body: JSON.stringify(body)
+            });
+            showResponse(await res.json());
+        };
+
+        // --- ADDED: User Get By ID ---
+        document.getElementById('btn-user-get').onclick = async () => {
+            const id = document.getElementById('user-id').value;
+            const res = await fetch(`${baseUrl}/users/${id}`, { method: 'GET', credentials: 'include' });
             showResponse(await res.json());
         };
     });

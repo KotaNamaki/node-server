@@ -3,111 +3,178 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Test API E-Commerce</title>
+    <title>API Tester - MotoDiv (Fix Null Image)</title>
     <style>
-        body { font-family: sans-serif; max-width: 800px; margin: 20px auto; padding: 0 20px; background: #f4f4f4; }
-        .card { background: white; padding: 20px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        h2 { margin-top: 0; }
-        .form-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; }
-        input, textarea { width: 100%; padding: 8px; box-sizing: border-box; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 4px; }
-        button { background: #28a745; color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 4px; font-size: 16px; }
-        button:hover { background: #218838; }
-        pre { background: #2d2d2d; color: #83ff83; padding: 15px; overflow-x: auto; border-radius: 4px; }
-        .response-area { display: none; }
+        body { font-family: sans-serif; display: flex; flex-wrap: wrap; gap: 10px; padding: 10px; background: #f4f4f4; }
+        section { border: 1px solid #ddd; padding: 15px; background: #fff; border-radius: 8px; flex: 1 1 300px; }
+        input, select, button, textarea { width: 100%; margin-bottom: 8px; padding: 8px; box-sizing: border-box; }
+        button { background: #007bff; color: white; border: none; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .product-card { border: 1px solid #ddd; padding: 10px; background: #fff; width: 150px; }
+        .product-card img { width: 100%; height: 100px; object-fit: cover; background: #eee; }
+        pre { background: #222; color: #lime; padding: 10px; overflow: auto; max-height: 200px; color: #cfc; }
     </style>
 </head>
 <body>
 
-<h1>Tester API Toko Online</h1>
+<section>
+    <h2>1. Auth</h2>
+    <input type="email" id="login-email" placeholder="Email" value="admin@mail.com">
+    <input type="password" id="login-pass" placeholder="Password" value="123456">
+    <button id="btn-login">Login</button>
+    <div id="user-info">Belum Login</div>
+</section>
 
-<div class="card">
-    <h2>1. Login (Dapatkan Session)</h2>
-    <div class="form-group">
-        <label>Email</label>
-        <input type="email" id="email" value="admin@example.com" placeholder="Masukkan email admin">
-    </div>
-    <div class="form-group">
-        <label>Password</label>
-        <input type="password" id="password" value="123456" placeholder="Masukkan password">
-    </div>
-    <button onclick="handleLogin()">Login</button>
-    <div id="loginResult" class="response-area"><pre></pre></div>
-</div>
+<section>
+    <h2>2. Products</h2>
+    <button id="btn-get-products">Get All Products</button>
+    <input type="number" id="prod-id" placeholder="ID Produk">
+    <button id="btn-get-product-by-id">Get One Product</button>
 
-<div class="card">
-    <h2>2. Tambah Produk (Upload Gambar)</h2>
-    <form id="productForm">
-        <label>Nama Produk:</label>
-        <input type="text" name="nama" required>
+    <hr>
+    <h3>Update (Admin)</h3>
+    <input type="number" id="admin-prod-id" placeholder="ID Produk yg mau diedit">
+    <input type="file" id="admin-prod-file" multiple>
+    <button id="btn-admin-update-prod">Update Gambar Produk</button>
+</section>
 
-        <label>Kategori:</label>
-        <input type="text" name="kategori" required>
-
-        <label>Deskripsi:</label>
-        <textarea name="deskripsi" rows="3" required></textarea>
-
-        <label>Harga:</label>
-        <input type="number" name="harga" required>
-
-        <label>Stok:</label>
-        <input type="number" name="stok" required>
-
-        <label>Gambar (Bisa pilih > 1):</label>
-        <input type="file" name="gambar" multiple accept="image/*" required>
-
-        <button type="submit">Upload Produk</button>
-    </form>
-    <div id="productResult" class="response-area"><pre></pre></div>
-</div>
+<section style="flex-grow: 2;">
+    <h2>Result</h2>
+    <div id="preview-area" style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:10px;"></div>
+    <pre id="output">...</pre>
+</section>
 
 <script>
-    const BASE_URL = 'http://localhost:3000'; // Sesuaikan port server Anda
+    const baseUrl = 'http://localhost:3000';
+    const output = document.getElementById('output');
+    const preview = document.getElementById('preview-area');
 
-    // Fungsi Helper untuk menampilkan hasil
-    function showResult(elementId, data) {
-        const el = document.getElementById(elementId);
-        el.style.display = 'block';
-        el.querySelector('pre').textContent = JSON.stringify(data, null, 2);
-    }
+    // Helper
+    const show = (data) => output.textContent = JSON.stringify(data, null, 2);
 
-    // 1. Handle Login
-    async function handleLogin() {
-        const email = document.getElementById('email').value;
-        const password = document.getElementById('password').value;
-
+    document.getElementById('btn-login').onclick = async () => {
         try {
-            const res = await fetch(`${BASE_URL}/auth/login`, {
+            const res = await fetch(`${baseUrl}/auth/login`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password }),
-                credentials: 'include' // PENTING: Agar cookie session tersimpan
+                headers: {'Content-Type': 'application/json'},
+                credentials: 'include',
+                body: JSON.stringify({
+                    email: document.getElementById('login-email').value,
+                    password: document.getElementById('login-pass').value
+                })
             });
             const data = await res.json();
-            showResult('loginResult', data);
-            if(res.ok) alert("Login Berhasil! Silakan upload produk.");
-        } catch (err) {
-            showResult('loginResult', { error: err.message });
-        }
-    }
+            show(data);
+            if(res.ok) document.getElementById('user-info').innerText = `Login: ${data.user.email}`;
+        } catch (e) { show(e); }
+    };
 
-    // 2. Handle Upload Produk
-    document.getElementById('productForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const formData = new FormData(e.target); // Otomatis bungkus file & text
+    // --- FIX UTAMA DISINI (GET ALL) ---
+    document.getElementById('btn-get-products').onclick = async () => {
+        preview.innerHTML = 'Loading...';
+        try {
+            const res = await fetch(`${baseUrl}/products/search`, { method: 'GET', credentials: 'include' });
+            const data = await res.json();
+            show(data);
+
+            preview.innerHTML = '';
+            if (Array.isArray(data)) {
+                data.forEach(prod => {
+                    let imgSrc = 'https://via.placeholder.com/150?text=No+Image';
+
+                    // Cek apakah array gambar ada isinya
+                    if (Array.isArray(prod.gambar) && prod.gambar.length > 0) {
+                        const rawImg = prod.gambar[0];
+
+                        // FIX: Cek if rawImg tidak null/undefined sebelum .startsWith
+                        if (rawImg && typeof rawImg === 'string') {
+                            if (rawImg.startsWith('http')) {
+                                imgSrc = rawImg;
+                            } else {
+                                imgSrc = `${baseUrl}/uploads/${rawImg}`;
+                            }
+                        }
+                    }
+                    // Fallback untuk format string lama
+                    else if (typeof prod.gambar === 'string' && prod.gambar) {
+                        imgSrc = prod.gambar.startsWith('http') ? prod.gambar : `${baseUrl}/uploads/${prod.gambar}`;
+                    }
+
+                    const div = document.createElement('div');
+                    div.className = 'product-card';
+                    div.innerHTML = `
+                        <img src="${imgSrc}" onerror="this.src='https://via.placeholder.com/150?text=Error'">
+                        <div><b>${prod.nama}</b></div>
+                        <div>Rp${prod.harga}</div>
+                    `;
+                    preview.appendChild(div);
+                });
+            }
+        } catch (e) { show(e); }
+    };
+
+    // --- FIX UTAMA DISINI (GET ONE) ---
+    document.getElementById('btn-get-product-by-id').onclick = async () => {
+        const id = document.getElementById('prod-id').value;
+        try {
+            const res = await fetch(`${baseUrl}/products/search/${id}`, { method: 'GET', credentials: 'include' });
+            const data = await res.json();
+            show(data);
+            preview.innerHTML = '';
+
+            if (data.nama) {
+                let imgSrc = 'https://via.placeholder.com/150?text=No+Image';
+                let rawImg = null;
+
+                if (Array.isArray(data.gambar) && data.gambar.length > 0) rawImg = data.gambar[0];
+                else if (typeof data.gambar === 'string') {
+                    // Coba parse JSON jaga-jaga
+                    if (data.gambar.startsWith('[')) {
+                        try { rawImg = JSON.parse(data.gambar)[0]; } catch(e) { rawImg = data.gambar; }
+                    } else { rawImg = data.gambar; }
+                }
+
+                // FIX: Pastikan rawImg ada isinya
+                if (rawImg && typeof rawImg === 'string') {
+                    imgSrc = rawImg.startsWith('http') ? rawImg : `${baseUrl}/uploads/${rawImg}`;
+                }
+
+                const div = document.createElement('div');
+                div.className = 'product-card';
+                div.innerHTML = `<img src="${imgSrc}"><div><b>${data.nama}</b></div>`;
+                preview.appendChild(div);
+            }
+        } catch (e) { show(e); }
+    };
+
+    // --- UPDATE PRODUK (Fix Logic Upload) ---
+    document.getElementById('btn-admin-update-prod').onclick = async () => {
+        const id = document.getElementById('admin-prod-id').value;
+        if(!id) return alert('Isi ID Produk');
+
+        const formData = new FormData();
+        const files = document.getElementById('admin-prod-file').files;
+
+        // Kirim file jika ada
+        if (files.length > 0) {
+            for(let i=0; i<files.length; i++) {
+                formData.append('gambar', files[i]); // Sesuai backend: upload.array('gambar')
+            }
+        }
+
+        // Contoh update nama (opsional, sesuaikan kebutuhan)
+        // formData.append('nama', 'Nama Baru');
 
         try {
-            const res = await fetch(`${BASE_URL}/products`, {
-                method: 'POST',
-                body: formData, // Jangan set Content-Type header manual saat pakai FormData
-                credentials: 'include' // Kirim cookie session login
+            // Gunakan endpoint update yang sudah diperbaiki di backend
+            const res = await fetch(`${baseUrl}/products/${id}`, {
+                method: 'PATCH', // Atau PUT tergantung route backend Anda
+                credentials: 'include',
+                body: formData
             });
-            const data = await res.json();
-            showResult('productResult', data);
-        } catch (err) {
-            showResult('productResult', { error: err.message });
-        }
-    });
+            show(await res.json());
+        } catch(e) { show(e); }
+    };
 </script>
 </body>
 </html>
