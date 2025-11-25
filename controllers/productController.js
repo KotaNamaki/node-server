@@ -1,5 +1,7 @@
 const { getDbPool } = require('../database');
 const { uploadToAppwrite } = require('../services/appwriteServices.js');
+const cache = require('../utils/cache');
+const CACHE_KEY_PRODUCTS = 'all_products';
 
 // Use CommonJS exports so this file works with require()
 const getProductById = async (req, res) => {
@@ -80,6 +82,7 @@ const updateProduct = async (req, res) => {
         } catch(e) {
             console.log(e)
         }
+        cache.del(CACHE_KEY_PRODUCTS);
         return res.json({
             message: 'Produk berhasil diupdate!',
             user: updatedProd
@@ -124,6 +127,7 @@ const addProduct = async (req, res) => {
             'INSERT INTO Produk (nama, kategori, deskripsi, harga, stok, gambar) VALUES (?, ?, ?, ?, ?, ?)',
             [nama, kategori, deskripsi, harga, stok, gambarString]
         );
+        cache.del(CACHE_KEY_PRODUCTS);
 
         res.status(201).json({
             message: 'Produk berhasil disimpan ke Appwrite & DB',
@@ -139,6 +143,12 @@ const addProduct = async (req, res) => {
 
 const getProductAll = async (req, res) => {
     try {
+        const cachedData = cache.get(CACHE_KEY_PRODUCTS);
+        if (cachedData) {
+            console.log('Serving from cache');
+            return res.json(cachedData);
+        }
+
         const db = await getDbPool();
         const query = `
             SELECT id_produk, nama, deskripsi, harga, stok, gambar
@@ -149,13 +159,10 @@ const getProductAll = async (req, res) => {
 
         // LOGIKA AMAN UNTUK MEMPROSES GAMBAR
         const products = rows.map(product => {
-            // 1. Jika gambar kosong/null
             if (!product.gambar) {
                 product.gambar = [];
                 return product;
             }
-
-            // 2. Coba Parse sebagai JSON (Format Baru: '["img1.jpg"]')
             try {
                 // Cek sekilas apakah terlihat seperti array string
                 if (typeof product.gambar === 'string' && product.gambar.trim().startsWith('[')) {
@@ -172,6 +179,7 @@ const getProductAll = async (req, res) => {
             }
             return product;
         });
+        cache.set(CACHE_KEY_PRODUCTS, products);
 
         res.json(products);
     } catch (error) {
@@ -192,6 +200,7 @@ const deleteProduct = async (req, res) => {
             return res.status(404).json({message: 'Produk tidak ditemukan'})
         }
         await db.query('DELETE FROM Produk WHERE id_produk = ?', [id]);
+        cache.del(CACHE_KEY_PRODUCTS);
         return res.status(200).json({message:'Produk telah di delete dari db'})
 
     }catch(error) {

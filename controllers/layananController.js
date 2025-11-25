@@ -1,7 +1,12 @@
 const {getDbPool} = require('../database');
+const cache = require('../utils/cache');
+const KEY_LAYANAN = 'all_layanan';
+
 
 const getAllLayanan = async (req, res) => {
     try {
+        const getcached = cache.get(KEY_LAYANAN);
+        if (getcached) return res.json(getcached);
         const db = await getDbPool();
         const [rows] = await db.query('SELECT * FROM Layanan_modifikasi');
         res.json(rows);
@@ -36,6 +41,7 @@ const addLayanan = async (req, res) => {
             'INSERT INTO Layanan_modifikasi (nama_layanan, jenis_modifikasi, deskripsi, estimasi_waktu, estimasi_harga) VALUES (?, ?, ?, ?, ?)',
             [nama_layanan, jenis_modifikasi, deskripsi, estimasi_waktu, estimasi_harga]
         );
+        cache.del(KEY_LAYANAN);
         res.status(201).json({ message: 'Layanan ditambahkan', id: result.insertId });
     } catch (error) {
         res.status(500).json({ message: 'Server Error' });
@@ -69,6 +75,7 @@ const updateLayanan = async (req, res) => {
         if (result.affectedRows === 0) {
             return res.status(404).json({ message: 'Layanan tidak ditemukan.' });
         }
+        cache.del(KEY_LAYANAN);
         res.json({ message: 'Layanan diperbarui.' });
     } catch (error) {
         res.status(500).json({ message: 'Server Error' });
@@ -83,6 +90,7 @@ const deleteLayanan = async (req, res) => {
         if (result.affectedRows === 0) {
             return res.status(404).json({ message: 'Layanan tidak ditemukan.' });
         }
+        cache.del(KEY_LAYANAN);
         res.json({ message: 'Layanan dihapus.' });
     } catch (error) {
         res.status(500).json({ message: 'Server Error' });
