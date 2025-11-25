@@ -114,6 +114,10 @@ const addProduct = async (req, res) => {
         const db = await getDbPool();
 
         // Cek duplikat... (kode sama)
+        const [existingProduct] = await db.query('SELECT id_produk FROM Produk WHERE nama = ?', [nama]);
+        if (existingProduct.length > 0) {
+            return res.status(409).json({ message: 'Produk dengan nama ini sudah ada.' });
+        }
         // Insert produk... (kode sama)
 
         const [result] = await db.query(
