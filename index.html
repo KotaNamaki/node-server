@@ -349,7 +349,7 @@
         document.getElementById('btn-get-products').onclick = async () => {
             previewArea.innerHTML = '<em style="color:#666">Loading...</em>';
             try {
-                const res = await fetch(`${baseUrl}/products/search`, {
+                const res = await fetch(`${baseUrl}/products`, {
                     method: 'GET',
                     credentials: 'include'
                 });
@@ -386,7 +386,7 @@
                         card.innerHTML = `
                             <img src="${imgSrc}" alt="${prod.nama}" onerror="this.src='https://via.placeholder.com/150?text=Error'">
                             <strong>${prod.nama}</strong>
-                            <div>ID: ${prod.id_produk}</div>
+                            <div>ID: ${prod.id}</div>
                             <div>Rp ${prod.harga}</div>
                             <div style="font-size:10px; color:gray">Stok: ${prod.stok}</div>
                         `;
@@ -410,7 +410,7 @@
             previewArea.innerHTML = '<em style="color:#666">Loading single product...</em>';
 
             try {
-                const res = await fetch(`${baseUrl}/products/search/${prodId}`, {
+                const res = await fetch(`${baseUrl}/products/${prodId}`, {
                     method: 'GET',
                     credentials: 'include'
                 });
@@ -460,7 +460,7 @@
                     <strong>${data.nama}</strong>
                     <div style="margin:5px 0; font-size:0.85rem;">${data.deskripsi || 'Tidak ada deskripsi'}</div>
                     <div style="font-weight:bold; color:#28a745;">Rp ${data.harga}</div>
-                    <div style="font-size:10px; color:gray">Stok: ${data.stok} | ID: ${data.id_produk}</div>
+                    <div style="font-size:10px; color:gray">Stok: ${data.stok} | ID: ${data.id}</div>
                 `;
 
                 previewArea.appendChild(card);

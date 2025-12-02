@@ -10,8 +10,13 @@ const upload = require('../middleware/uploadMiddleware');
 const { authReq, adminReq } = require('../middleware/authMiddleWare');
 
 // Route Get (Public)
-router.get('/search', productController.getProductAll);
-router.get('/search/:id', productController.getProductById);
+// React-Admin compatible endpoints
+router.get('/', productController.getProductsRA);
+router.get('/:id', productController.getProductRA);
+
+// Legacy endpoints (opsional tetap disediakan sementara)
+// router.get('/search', productController.getProductAll);
+// router.get('/search/:id', productController.getProductById);
 
 // Route Add Product (Admin Only + Upload)
 // URUTAN PENTING: Auth -> Admin -> Upload -> Controller

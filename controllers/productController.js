@@ -10,13 +10,10 @@ const getProductById = async (req, res) => {
         const db = await getDbPool();
         const query = `SELECT * FROM Produk WHERE id_produk = ?`;
         const [rows] = await db.query(query, [id]);
-
         if (rows.length === 0) {
             return res.status(404).json({ message: 'Product not found.' });
         }
-
         const product = rows[0];
-
         // LOGIKA AMAN SAMA SEPERTI DI ATAS
         if (!product.gambar) {
             product.gambar = [];
@@ -32,7 +29,6 @@ const getProductById = async (req, res) => {
                 product.gambar = [product.gambar];
             }
         }
-
         res.json(product);
     } catch (error) {
         console.error(`Failed to fetch product ${req.params.id}:`, error);
@@ -83,10 +79,16 @@ const updateProduct = async (req, res) => {
             console.log(e)
         }
         cache.del(CACHE_KEY_PRODUCTS);
-        return res.json({
-            message: 'Produk berhasil diupdate!',
-            user: updatedProd
-        });
+        // Normalisasi response untuk react-admin (gunakan field id)
+        const normalized = {
+            id: updatedProd.id_produk,
+            nama: updatedProd.nama,
+            deskripsi: updatedProd.deskripsi,
+            harga: updatedProd.harga,
+            stok: updatedProd.stok,
+            gambar: updatedProd.gambar
+        };
+        return res.json(normalized);
     }catch (error) {
         console.error(`Failed to update product ${req.params.id}:`, error);
         return res.status(500).json({message:'Error updating product '+req.params.id});
@@ -129,10 +131,15 @@ const addProduct = async (req, res) => {
         );
         cache.del(CACHE_KEY_PRODUCTS);
 
+        // Kembalikan objek lengkap sesuai ekspektasi react-admin (punya field id)
         res.status(201).json({
-            message: 'Produk berhasil disimpan ke Appwrite & DB',
-            produkID: result.insertId,
-            images: imageUrls
+            id: result.insertId,
+            nama,
+            kategori,
+            deskripsi,
+            harga,
+            stok,
+            gambar: imageUrls
         });
 
     } catch (error) {
@@ -201,7 +208,8 @@ const deleteProduct = async (req, res) => {
         }
         await db.query('DELETE FROM Produk WHERE id_produk = ?', [id]);
         cache.del(CACHE_KEY_PRODUCTS);
-        return res.status(200).json({message:'Produk telah di delete dari db'})
+        // Kembalikan minimal { id } untuk kompatibilitas react-admin
+        return res.status(200).json({ id: Number(id) })
 
     }catch(error) {
         console.error('Gagal mencari produk:', error);
@@ -212,10 +220,120 @@ const deleteProduct = async (req, res) => {
     }
 }
 
+// =========================
+// React-Admin friendly handlers
+// =========================
+// GET /products?sort=["field","ASC"]&range=[0,24]&filter={...}
+const getProductsRA = async (req, res) => {
+    try {
+        const db = await getDbPool();
+
+        // Parse query dari react-admin
+        const sort = req.query.sort ? JSON.parse(req.query.sort) : ["id_produk", "ASC"];
+        const range = req.query.range ? JSON.parse(req.query.range) : [0, 24];
+        const filter = req.query.filter ? JSON.parse(req.query.filter) : {};
+
+        const [sortField, sortOrder] = sort;
+        const [start, end] = range;
+        const limit = Math.max(0, end - start + 1);
+        const offset = Math.max(0, start);
+
+        const whereClauses = [];
+        const params = [];
+
+        // Pencarian sederhana via q
+        if (filter.q) {
+            whereClauses.push('nama LIKE ?');
+            params.push(`%${filter.q}%`);
+        }
+        // GET_MANY, GET_MANY_REFERENCE via filter.id (array)
+        if (filter.id) {
+            const ids = Array.isArray(filter.id) ? filter.id : [filter.id];
+            if (ids.length > 0) {
+                whereClauses.push(`id_produk IN (${ids.map(() => '?').join(',')})`);
+                params.push(...ids);
+            }
+        }
+        const whereSql = whereClauses.length ? `WHERE ${whereClauses.join(' AND ')}` : '';
+
+        // Total untuk Content-Range
+        const [[{ total }]] = await db.query(
+            `SELECT COUNT(*) as total FROM Produk ${whereSql}`,
+            params
+        );
+
+        // Data halaman
+        const [rows] = await db.query(
+            `SELECT id_produk, nama, deskripsi, harga, stok, gambar
+             FROM Produk
+             ${whereSql}
+             ORDER BY ${sortField} ${sortOrder === 'DESC' ? 'DESC' : 'ASC'}
+             LIMIT ? OFFSET ?`,
+            [...params, limit, offset]
+        );
+
+        // Normalisasi id & gambar
+        const data = rows.map(r => ({
+            id: r.id_produk,
+            nama: r.nama,
+            deskripsi: r.deskripsi,
+            harga: r.harga,
+            stok: r.stok,
+            gambar: !r.gambar ? [] : (String(r.gambar).trim().startsWith('[') ? JSON.parse(r.gambar) : [r.gambar])
+        }));
+
+        // Header untuk react-admin
+        const safeStart = isNaN(offset) ? 0 : offset;
+        const safeEnd = isNaN(end) ? safeStart + data.length - 1 : Math.min(end, Math.max(total - 1, 0));
+        res.set('Content-Range', `products ${safeStart}-${safeEnd}/${total}`);
+        res.set('Access-Control-Expose-Headers', 'Content-Range');
+
+        return res.json(data);
+    } catch (e) {
+        console.error('Error fetching products (RA):', e);
+        return res.status(500).json({ message: 'Error fetching products' });
+    }
+};
+
+// GET /products/:id — kembalikan objek dengan field id
+const getProductRA = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const db = await getDbPool();
+        const [rows] = await db.query('SELECT * FROM Produk WHERE id_produk = ?', [id]);
+        if (!rows.length) return res.status(404).json({ message: 'Not found' });
+        const p = rows[0];
+        let gambar = [];
+        try {
+            if (p.gambar) {
+                gambar = (typeof p.gambar === 'string' && p.gambar.trim().startsWith('['))
+                    ? JSON.parse(p.gambar)
+                    : [p.gambar];
+            }
+        } catch (e) {
+            gambar = p.gambar ? [p.gambar] : [];
+        }
+        return res.json({
+            id: p.id_produk,
+            nama: p.nama,
+            kategori: p.kategori,
+            deskripsi: p.deskripsi,
+            harga: p.harga,
+            stok: p.stok,
+            gambar
+        });
+    } catch (e) {
+        console.error('Error fetching product (RA):', e);
+        return res.status(500).json({ message: 'Error fetching product' });
+    }
+};
+
 module.exports = {
     getProductById,
     addProduct,
     getProductAll,
     updateProduct,
     deleteProduct,
+    getProductsRA,
+    getProductRA,
 };

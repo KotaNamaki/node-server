@@ -14,8 +14,9 @@ const PORT = process.env.PORT || 3000;
 
 app.use(cors({
     origin: ['http://localhost', 'http://127.0.0.1:5500', 'https://motodiv.store', 'https://admin.motodiv.store', 'null', 'https://api.motodiv.store'], // 'null' untuk file lokal
-    methods: ['GET','POST','PATCH','DELETE'],
-    credentials: true // PENTING: Izinkan cookies
+    methods: ['GET','POST','PATCH','PUT','DELETE'],
+    credentials: true, // PENTING: Izinkan cookies
+    exposedHeaders: ['Content-Range'] // untuk react-admin membaca total dari header
 }));
 //whoops
 app.use(express.json());

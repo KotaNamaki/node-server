@@ -58,32 +58,45 @@ await api.post('/auth/register', { nama: 'Budi', email: 'budi@example.com', pass
 await api.post('/auth/logout');
 ```
 
-Products
-- List products
+Products (React-Admin compatible)
+- List products (supports sort/range/filter)
 ```
-await api.get('/products/search');
+// Example: first page (0-24), sort by nama ASC
+await api.get('/products', {
+  params: {
+    sort: JSON.stringify(["nama","ASC"]),
+    range: JSON.stringify([0,24]),
+    filter: JSON.stringify({ q: "ban" })
+  }
+});
+// Note: server returns header `Content-Range: products start-end/total`
+// CORS exposes this header via `exposedHeaders: ['Content-Range']`
 ```
 - Product detail
 ```
-await api.get('/products/search/1');
+await api.get('/products/1');
 ```
-- Create product (admin, with image)
+- Create product (admin, with image). Response returns full object with `id`.
 ```
 const data = new FormData();
 data.append('nama', 'Ban Premium');
 data.append('harga', 150000);
+data.append('stok', 10);
 data.append('gambar', fileInput.files[0]);
 await api.post('/products', data, { headers: { 'Content-Type': 'multipart/form-data' }});
+// -> { id, nama, kategori, deskripsi, harga, stok, gambar: [url,...] }
 ```
-- Update product (admin)
+- Update product (admin). Response returns updated object with `id`.
 ```
 const data2 = new FormData();
 data2.append('nama', 'Ban Premium X');
 await api.patch('/products/1', data2, { headers: { 'Content-Type': 'multipart/form-data' }});
+// -> { id, nama, deskripsi, harga, stok, gambar }
 ```
-- Delete product (admin)
+- Delete product (admin). Response returns `{ id }`.
 ```
 await api.delete('/products/1');
+// -> { id: 1 }
 ```
 
 Cart (requires login)
@@ -161,3 +174,15 @@ await api.patch('/users/update/1', { nama: 'Budi Update', password: 'newpass' })
 ```
 
 ---
+
+## Notes for React-Admin integration
+
+- Data Provider: You can use `ra-data-simple-rest` pointing to the API base URL (`/`).
+- Requirements satisfied by this API:
+  - GET_LIST at `GET /products?sort=["field","ASC"]&range=[start,end]&filter={}` with `Content-Range` header.
+  - GET_ONE at `GET /products/:id` returns object with `id`.
+  - CREATE returns created object with `id`.
+  - UPDATE returns updated object with `id`.
+  - DELETE returns `{ id }`.
+- Auth: this API uses session cookies. Ensure your React app performs requests with `credentials: 'include'`.
+- File upload: send `multipart/form-data` for product create/update; images are uploaded to Appwrite and URLs are stored in DB.

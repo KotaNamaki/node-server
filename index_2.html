@@ -73,7 +73,7 @@
     document.getElementById('btn-get-products').onclick = async () => {
         preview.innerHTML = 'Loading...';
         try {
-            const res = await fetch(`${baseUrl}/products/search`, { method: 'GET', credentials: 'include' });
+            const res = await fetch(`${baseUrl}/products`, { method: 'GET', credentials: 'include' });
             const data = await res.json();
             show(data);
 
@@ -117,7 +117,7 @@
     document.getElementById('btn-get-product-by-id').onclick = async () => {
         const id = document.getElementById('prod-id').value;
         try {
-            const res = await fetch(`${baseUrl}/products/search/${id}`, { method: 'GET', credentials: 'include' });
+            const res = await fetch(`${baseUrl}/products/${id}`, { method: 'GET', credentials: 'include' });
             const data = await res.json();
             show(data);
             preview.innerHTML = '';
