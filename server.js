@@ -13,7 +13,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors({
-    origin: ['http://localhost:3000', 'http://127.0.0.1:5500', 'https://motodiv.store', 'https://admin.motodiv.store', 'null', 'https://api.motodiv.store','http://localhost:5173' ], // 'null' untuk file lokal
+    origin: ['http://localhost:3000', 'http://127.0.0.1:5500', 'https://motodiv.store', 'https://admin.motodiv.store', 'null', 'https://api.motodiv.store','http://localhost:5173','http://localhost:4173' ], // 'null' untuk file lokal
     methods: ['GET','POST','PATCH','PUT','DELETE'],
     credentials: true, // PENTING: Izinkan cookies
     exposedHeaders: ['Content-Range']
