@@ -13,10 +13,10 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors({
-    origin: ['http://localhost', 'http://127.0.0.1:5500', 'https://motodiv.store', 'https://admin.motodiv.store', 'null', 'https://api.motodiv.store'], // 'null' untuk file lokal
+    origin: ['http://localhost:3000', 'http://127.0.0.1:5500', 'https://motodiv.store', 'https://admin.motodiv.store', 'null', 'https://api.motodiv.store','http://localhost:5173' ], // 'null' untuk file lokal
     methods: ['GET','POST','PATCH','PUT','DELETE'],
     credentials: true, // PENTING: Izinkan cookies
-    exposedHeaders: ['Content-Range'] // untuk react-admin membaca total dari header
+    exposedHeaders: ['Content-Range']
 }));
 //whoops
 app.use(express.json());
@@ -59,13 +59,11 @@ app.use(express.json());
         const AuthRoutes = require('./routes/authRoutes');
         const CartRoutes = require('./routes/cartRoutes');
         const OrderRoutes = require('./routes/orderRoutes');
+        const AnalyticsRoutes = require('./routes/analyticsRoutes');
         const LayananRoutes = require('./routes/layananRoutes');
         const UlasanRoutes = require('./routes/ulasanRoutes');
 
-        app.use((err, req, res, next) => {
-            console.log(err);
-            res.status(500).json({ message: 'Terjadi Error: ', err });
-        });
+
 
         app.get('/', (req, res) => {
             res.json('E-Commerce API (Session-based) is up and running!');
@@ -76,12 +74,17 @@ app.use(express.json());
         app.use('/auth', AuthRoutes);
         app.use('/cart', CartRoutes);
         app.use('/orders', OrderRoutes);
+        app.use('/analytics', AnalyticsRoutes);
         app.use('/layanan', LayananRoutes);
         app.use('/ulasan', UlasanRoutes);
         app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+        app.use((err, req, res, next) => {
+            console.log(err);
+            res.status(500).json({ message: 'Terjadi Error: ', err });
+        });
 
         app.listen(PORT, () => {
-            console.log(`Server started on https://localhost:${PORT}`);
+            console.log(`Server started on http://localhost:${PORT}`);
         });
     } catch (err) {
         console.error({message: 'Gagal dalam starting server atau session store', err});

@@ -41,6 +41,8 @@ const getUser = async (req, res) => {
         SELECT user_id, nama, email, no_hp, role
         FROM User`;
         const [rows] = await db.query(query);
+        res.set('Content-Range', `users 0-${rows.length}/${rows.length}`);
+        res.set('Access-Control-Expose-Headers', 'Content-Range');
         res.json(rows);
     } catch (error) {
         console.error(`Failed to fetch users`, error);

@@ -128,15 +128,45 @@ await api.post('/orders/123/payments', { method: 'QRIS', amount: 50000 });
 ```
 - Order detail
 ```
-await api.get('/orders/get/123');
+await api.get('/orders/123');
 ```
-- Admin: list all orders
+- Admin: list all orders (React-Admin compatible, returns `Content-Range`)
 ```
-await api.get('/orders');
+await api.get('/orders', {
+  params: {
+    sort: JSON.stringify(["created_at","DESC"]),
+    range: JSON.stringify([0,24]),
+    filter: JSON.stringify({
+      // Supported filters:
+      // q: search by customer name/email or order id
+      // status or status_pesanan: e.g. 'pending', 'diproses', 'selesai'
+      // id or id_pesanan: number or array of numbers
+      // created_at_gte / created_at_lte (or createdAt_gte / createdAt_lte): ISO date strings
+      status: 'pending',
+      createdAt_gte: '2025-01-01',
+      createdAt_lte: '2025-12-31'
+    })
+  }
+});
+// Note: server returns header `Content-Range: orders start-end/total`
+// and exposes it via CORS so the frontend can read it
 ```
 - Admin: update status
 ```
 await api.post('/orders/123/status', { status: 'diproses' });
+```
+
+Analytics (admin only)
+```
+// Dashboard counters
+await api.get('/analytics/orders/counters', { params: { lastDays: 7 } });
+// -> { last7DaysOrders, pendingOrders, windowDays }
+
+// Monthly sales buckets
+await api.get('/analytics/sales/by-month', {
+  params: { from: '2025-01-01', to: '2025-12-31' }
+});
+// -> { buckets: [{ period: 'YYYY-MM', total }], from, to }
 ```
 
 Services (Layanan)
@@ -180,9 +210,17 @@ await api.patch('/users/update/1', { nama: 'Budi Update', password: 'newpass' })
 - Data Provider: You can use `ra-data-simple-rest` pointing to the API base URL (`/`).
 - Requirements satisfied by this API:
   - GET_LIST at `GET /products?sort=["field","ASC"]&range=[start,end]&filter={}` with `Content-Range` header.
+  - GET_LIST at `GET /orders?sort=["field","ASC|DESC"]&range=[start,end]&filter={}` with `Content-Range` header.
+    - Supported filters: `q`, `status`/`status_pesanan`, `id`/`id_pesanan` (number or array),
+      `created_at_gte`/`created_at_lte` or `createdAt_gte`/`createdAt_lte` (ISO date).
   - GET_ONE at `GET /products/:id` returns object with `id`.
+  - GET_ONE at `GET /orders/:id` returns order with items and optional payment.
   - CREATE returns created object with `id`.
   - UPDATE returns updated object with `id`.
   - DELETE returns `{ id }`.
 - Auth: this API uses session cookies. Ensure your React app performs requests with `credentials: 'include'`.
 - File upload: send `multipart/form-data` for product create/update; images are uploaded to Appwrite and URLs are stored in DB.
+
+Additional notes
+- CORS is configured to expose the `Content-Range` header so admin UIs can read totals.
+- Analytics endpoints are protected by `authReq` + `adminReq` middleware; ensure the logged-in user has role `admin`.

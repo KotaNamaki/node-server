@@ -229,7 +229,11 @@ const getProductsRA = async (req, res) => {
         const db = await getDbPool();
 
         // Parse query dari react-admin
+
         const sort = req.query.sort ? JSON.parse(req.query.sort) : ["id_produk", "ASC"];
+        if (sort[0] === 'id') {
+            sort[0] = 'id_produk';
+        }
         const range = req.query.range ? JSON.parse(req.query.range) : [0, 24];
         const filter = req.query.filter ? JSON.parse(req.query.filter) : {};
 
@@ -247,7 +251,7 @@ const getProductsRA = async (req, res) => {
             params.push(`%${filter.q}%`);
         }
         // GET_MANY, GET_MANY_REFERENCE via filter.id (array)
-        if (filter.id) {
+        if (filter.id_pr) {
             const ids = Array.isArray(filter.id) ? filter.id : [filter.id];
             if (ids.length > 0) {
                 whereClauses.push(`id_produk IN (${ids.map(() => '?').join(',')})`);
@@ -287,7 +291,6 @@ const getProductsRA = async (req, res) => {
         const safeEnd = isNaN(end) ? safeStart + data.length - 1 : Math.min(end, Math.max(total - 1, 0));
         res.set('Content-Range', `products ${safeStart}-${safeEnd}/${total}`);
         res.set('Access-Control-Expose-Headers', 'Content-Range');
-
         return res.json(data);
     } catch (e) {
         console.error('Error fetching products (RA):', e);

@@ -229,13 +229,103 @@ const getAllOrders = async (req, res) => {
         const pool = await getDbPool();
         connection = await pool.getConnection();
 
-        const [orders] = await connection.query('SELECT p.id_pesanan, p.total_harga, p.status_pesanan, p.created_at, u.nama as customer_name, u.email as customer_email FROM Pesanan p join User u ON p.id_user = u.user_id ORDER BY p.created_at DESC');
+        // React-Admin style params
+        const sort = req.query.sort ? JSON.parse(req.query.sort) : ["id_pesanan", "DESC"];
+        const range = req.query.range ? JSON.parse(req.query.range) : [0, 24];
+        const filter = req.query.filter ? JSON.parse(req.query.filter) : {};
 
-        return res.status(200).json(orders);
+        // Map RA 'id' to table column
+        if (sort[0] === 'id') sort[0] = 'id_pesanan';
+        // Support createdAt alias
+        if (sort[0] === 'createdAt') sort[0] = 'created_at';
+
+        const [sortField, sortOrder] = sort;
+        const [start, end] = range;
+        const limit = Math.max(0, (Number(end) - Number(start) + 1) || 25);
+        const offset = Math.max(0, Number(start) || 0);
+
+        const whereClauses = [];
+        const params = [];
+
+        // Text search (q) against customer name/email or order id
+        if (filter.q) {
+            whereClauses.push('(u.nama LIKE ? OR u.email LIKE ? OR p.id_pesanan = ?)');
+            params.push(`%${filter.q}%`, `%${filter.q}%`, Number(filter.q) || 0);
+        }
+        // Direct filters: status_pesanan, id_pesanan, user_id
+        if (filter.status || filter.status_pesanan) {
+            whereClauses.push('p.status_pesanan = ?');
+            params.push(filter.status || filter.status_pesanan);
+        }
+        if (filter.id) {
+            const ids = Array.isArray(filter.id) ? filter.id : [filter.id];
+            if (ids.length) {
+                whereClauses.push(`p.id_pesanan IN (${ids.map(() => '?').join(',')})`);
+                params.push(...ids.map(Number));
+            }
+        }
+        if (filter.id_pesanan) {
+            const ids = Array.isArray(filter.id_pesanan) ? filter.id_pesanan : [filter.id_pesanan];
+            if (ids.length) {
+                whereClauses.push(`p.id_pesanan IN (${ids.map(() => '?').join(',')})`);
+                params.push(...ids.map(Number));
+            }
+        }
+        // Date range filters: created_at_gte/lte or createdAt_gte/lte
+        const createdGte = filter.created_at_gte || filter.createdAt_gte;
+        const createdLte = filter.created_at_lte || filter.createdAt_lte;
+        if (createdGte) {
+            whereClauses.push('p.created_at >= ?');
+            params.push(new Date(createdGte));
+        }
+        if (createdLte) {
+            whereClauses.push('p.created_at <= ?');
+            params.push(new Date(createdLte));
+        }
+
+        const whereSql = whereClauses.length ? `WHERE ${whereClauses.join(' AND ')}` : '';
+
+        // Total count
+        const [[{ total }]] = await connection.query(
+            `SELECT COUNT(*) AS total
+             FROM Pesanan p
+             JOIN User u ON p.id_user = u.user_id
+             ${whereSql}`,
+            params
+        );
+
+        // Data page
+        const [rows] = await connection.query(
+            `SELECT p.id_pesanan, p.total_harga, p.status_pesanan, p.created_at,
+                    u.nama AS customer_name, u.email AS customer_email
+             FROM Pesanan p
+             JOIN User u ON p.id_user = u.user_id
+             ${whereSql}
+             ORDER BY ${sortField} ${sortOrder === 'ASC' ? 'ASC' : 'DESC'}
+             LIMIT ? OFFSET ?`,
+            [...params, limit, offset]
+        );
+
+        // Normalize id for RA and ensure ISO dates
+        const data = rows.map(r => ({
+            id: r.id_pesanan,
+            id_pesanan: r.id_pesanan,
+            total_harga: r.total_harga,
+            status_pesanan: r.status_pesanan,
+            created_at: r.created_at instanceof Date ? r.created_at.toISOString() : r.created_at,
+            customer_name: r.customer_name,
+            customer_email: r.customer_email
+        }));
+
+        const safeStart = isNaN(offset) ? 0 : offset;
+        const safeEnd = data.length ? safeStart + data.length - 1 : safeStart;
+        res.set('Content-Range', `orders ${safeStart}-${safeEnd}/${total}`);
+        res.set('Access-Control-Expose-Headers', 'Content-Range');
+        return res.status(200).json(data);
 
     } catch (error) {
         console.error('Error fetching all order:', error);
-        return res.status(500).json({ message: 'Server mengambil all order: ', error});
+        return res.status(500).json({ message: 'Server mengambil all order: ', error: error.message });
     }
     finally {
         if (connection) connection.release();
