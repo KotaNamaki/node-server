@@ -11,3 +11,4 @@ deployment:
     - /bin/cp -R controllers $DEPLOYPATH
     - /bin/cp -R routes $DEPLOYPATH
     - /bin/cp -R services $DEPLOYPATH
+    - /bin/cp -R utils $DEPLOYPATH
