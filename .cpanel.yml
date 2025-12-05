@@ -10,3 +10,4 @@ deployment:
     - /bin/cp -R middleware $DEPLOYPATH
     - /bin/cp -R controllers $DEPLOYPATH
     - /bin/cp -R routes $DEPLOYPATH
+    - /bin/cp -R services $DEPLOYPATH
