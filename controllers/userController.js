@@ -210,6 +210,33 @@ const userLogout = async (req, res) => {
     });
 }
 
+const deleteUser = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const LoggedInUserRole = req.user.role;
+
+        // Validasi: Hanya admin yang boleh menghapus user
+        if (LoggedInUserRole !== 'admin') {
+            return res.status(403).json({ message: 'Akses ditolak. Hanya Admin yang dapat menghapus user.' });
+        }
+
+        const db = await getDbPool();
+        const [result] = await db.query('DELETE FROM User WHERE user_id = ?', [id]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: 'User tidak ditemukan.' });
+        }
+
+        // React-Admin mengharapkan return object { id: ... } atau data record yang dihapus
+        res.json({ id });
+    } catch (error) {
+        console.error('Failed to delete user:', error);
+        res.status(500).json({ message: 'Server error while deleting user.' });
+    }
+};
+
+// ... (jangan lupa tambahkan deleteUser ke module.exports di bawah)
+
 const checkSession = async (req, res) => {
     if (req.session && req.session.user) {
         return res.status(200).json({
@@ -231,4 +258,5 @@ module.exports = {
     userRegister,
     userLogout,
     checkSession,
+    deleteUser,
 }

@@ -10,6 +10,7 @@ router.get('/produk/:idProduk', controller.getUlasanByProduk);
 
 // Rute Customer (Tambah ulasan)
 router.post('/', authReq, controller.addUlasan);
+router.get('/', controller.getAllUlasan);
 
 // Rute Admin (Hapus ulasan)
 router.delete('/:id', authReq, adminReq, controller.deleteUlasan);
