@@ -12,6 +12,6 @@ router.get('/:id', orderController.getOrderById);
 router.post('/:id/payments', orderController.addPayment); // <-- URL Diubah
 // admin
 router.get('/', adminReq, orderController.getAllOrders);
-router.post('/:id/status', adminReq, orderController.updateOrderStatus);
+router.patch('/:id', adminReq, orderController.updateOrderStatus);
 
 module.exports = router;
