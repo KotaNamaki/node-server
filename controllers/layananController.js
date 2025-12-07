@@ -4,15 +4,68 @@ const KEY_LAYANAN = 'all_layanan';
 
 
 const getAllLayanan = async (req, res) => {
+    let connection = null;
     try {
-        const getcached = cache.get(KEY_LAYANAN);
-        if (getcached) return res.json(getcached);
-        const db = await getDbPool();
-        const [rows] = await db.query('SELECT * FROM Layanan_modifikasi');
-        res.json(rows);
+        const pool = await getDbPool();
+        connection = await pool.getConnection();
+
+        // 1. Parsing Parameter
+        const sort = req.query.sort ? JSON.parse(req.query.sort) : ["id_layanan", "ASC"];
+        const range = req.query.range ? JSON.parse(req.query.range) : [0, 9];
+        const filter = req.query.filter ? JSON.parse(req.query.filter) : {};
+
+        // Mapping ID
+        if (sort[0] === 'id') sort[0] = 'id_layanan';
+        if (sort[0] === 'nama') sort[0] = 'nama_layanan'; // Mapping jika frontend kirim 'nama'
+
+        const [sortField, sortOrder] = sort;
+        const [start, end] = range;
+        const limit = Math.max(0, (Number(end) - Number(start) + 1) || 10);
+        const offset = Math.max(0, Number(start) || 0);
+
+        // 2. Filter
+        const whereClauses = [];
+        const params = [];
+
+        if (filter.q) {
+            whereClauses.push('(nama_layanan LIKE ? OR jenis_modifikasi LIKE ? OR deskripsi LIKE ?)');
+            params.push(`%${filter.q}%`, `%${filter.q}%`, `%${filter.q}%`);
+        }
+
+        const whereSql = whereClauses.length ? `WHERE ${whereClauses.join(' AND ')}` : '';
+
+        // 3. Count Total
+        const [[{ total }]] = await connection.query(
+            `SELECT COUNT(*) AS total FROM Layanan_modifikasi ${whereSql}`,
+            params
+        );
+
+        // 4. Get Data
+        const sql = `
+            SELECT * FROM Layanan_modifikasi
+            ${whereSql}
+            ORDER BY ${sortField} ${sortOrder}
+            LIMIT ? OFFSET ?
+        `;
+
+        const [rows] = await connection.query(sql, [...params, limit, offset]);
+
+        // 5. Response
+        const safeStart = isNaN(offset) ? 0 : offset;
+        const safeEnd = rows.length ? safeStart + rows.length - 1 : safeStart;
+
+        res.set('Content-Range', `layanan ${safeStart}-${safeEnd}/${total}`);
+        res.set('Access-Control-Expose-Headers', 'Content-Range');
+
+        // Mapping id
+        const data = rows.map(r => ({ ...r, id: r.id_layanan }));
+        res.json(data);
+
     } catch (error) {
         console.log(error);
         return res.status(500).send({message: 'Server Error', error});
+    } finally {
+        if (connection) connection.release();
     }
 };
 

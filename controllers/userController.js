@@ -35,18 +35,75 @@ const getUserByEmail = async (req, res) => {
 };
 
 const getUser = async (req, res) => {
+    let connection = null;
     try {
-        const db = await getDbPool();
-        const query = `
-        SELECT user_id, nama, email, no_hp, role
-        FROM User`;
-        const [rows] = await db.query(query);
-        res.set('Content-Range', `users 0-${rows.length}/${rows.length}`);
+        const pool = await getDbPool();
+        connection = await pool.getConnection();
+
+        // 1. Parsing Parameter dari React-Admin
+        const sort = req.query.sort ? JSON.parse(req.query.sort) : ["user_id", "ASC"];
+        const range = req.query.range ? JSON.parse(req.query.range) : [0, 9];
+        const filter = req.query.filter ? JSON.parse(req.query.filter) : {};
+
+        // Mapping field 'id' ke primary key database
+        if (sort[0] === 'id') sort[0] = 'user_id';
+
+        const [sortField, sortOrder] = sort;
+        const [start, end] = range;
+        const limit = Math.max(0, (Number(end) - Number(start) + 1) || 10);
+        const offset = Math.max(0, Number(start) || 0);
+
+        // 2. Build Query Filter
+        const whereClauses = [];
+        const params = [];
+
+        // Fitur Search (q)
+        if (filter.q) {
+            whereClauses.push('(nama LIKE ? OR email LIKE ? OR no_hp LIKE ?)');
+            params.push(`%${filter.q}%`, `%${filter.q}%`, `%${filter.q}%`);
+        }
+
+        // Filter spesifik field (jika ada)
+        if (filter.role) {
+            whereClauses.push('role = ?');
+            params.push(filter.role);
+        }
+
+        const whereSql = whereClauses.length ? `WHERE ${whereClauses.join(' AND ')}` : '';
+
+        // 3. Hitung Total Data (Untuk Pagination)
+        const [[{ total }]] = await connection.query(
+            `SELECT COUNT(*) AS total FROM User ${whereSql}`,
+            params
+        );
+
+        // 4. Ambil Data
+        const sql = `
+            SELECT user_id, nama, email, no_hp, role
+            FROM User
+            ${whereSql}
+            ORDER BY ${sortField} ${sortOrder}
+            LIMIT ? OFFSET ?
+        `;
+
+        const [rows] = await connection.query(sql, [...params, limit, offset]);
+
+        // 5. Response Header Content-Range (Wajib untuk React-Admin)
+        const safeStart = isNaN(offset) ? 0 : offset;
+        const safeEnd = rows.length ? safeStart + rows.length - 1 : safeStart;
+
+        res.set('Content-Range', `users ${safeStart}-${safeEnd}/${total}`);
         res.set('Access-Control-Expose-Headers', 'Content-Range');
-        res.json(rows);
+
+        // Mapping agar frontend menerima field 'id'
+        const data = rows.map(r => ({ ...r, id: r.user_id }));
+        res.json(data);
+
     } catch (error) {
         console.error(`Failed to fetch users`, error);
         res.status(500).json({ message: 'Error fetching users.' });
+    } finally {
+        if (connection) connection.release();
     }
 };
 

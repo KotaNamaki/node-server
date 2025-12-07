@@ -39,11 +39,12 @@ const getProductById = async (req, res) => {
 const updateProduct = async (req, res) => {
     try {
         const { id } = req.params;
-        const { nama, deskripsi, harga, stok} = req.body || {};
+        const { nama, deskripsi, kategori, harga, stok} = req.body || {};
         const fields  = [];
         const values = [];
 
         if (nama) { fields.push('nama = ?'); values.push(nama); }
+        if (kategori) { fields.push('kategori = ?'); values.push(kategori); } // TAMBAHKAN INI
         if (deskripsi) { fields.push('deskripsi = ?'); values.push(deskripsi); }
         if (harga) { fields.push('harga = ?'); values.push(harga); }
         if (stok) { fields.push('stok = ?'); values.push(stok); }
@@ -268,18 +269,18 @@ const getProductsRA = async (req, res) => {
 
         // Data halaman
         const [rows] = await db.query(
-            `SELECT id_produk, nama, deskripsi, harga, stok, gambar
+            `SELECT id_produk, nama, kategori, deskripsi, harga, stok, gambar
              FROM Produk
-             ${whereSql}
+                      ${whereSql}
              ORDER BY ${sortField} ${sortOrder === 'DESC' ? 'DESC' : 'ASC'}
              LIMIT ? OFFSET ?`,
             [...params, limit, offset]
         );
 
-        // Normalisasi id & gambar
         const data = rows.map(r => ({
             id: r.id_produk,
             nama: r.nama,
+            kategori: r.kategori, // PERBAIKAN 2: Masukkan ke object response
             deskripsi: r.deskripsi,
             harga: r.harga,
             stok: r.stok,

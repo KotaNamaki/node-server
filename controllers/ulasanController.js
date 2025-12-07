@@ -45,10 +45,51 @@ const addUlasan = async (req, res) => {
 };
 
 const getAllUlasan = async (req, res) => {
+    let connection = null;
     try {
-        const db = await getDbPool();
-        // Query untuk mengambil semua ulasan + nama user + nama produk/layanan (opsional)
-        // Kita gunakan LEFT JOIN agar jika produk/layanan dihapus, ulasan tetap muncul (atau sesuaikan kebutuhan)
+        const pool = await getDbPool();
+        connection = await pool.getConnection();
+
+        // 1. Parsing
+        const sort = req.query.sort ? JSON.parse(req.query.sort) : ["id_ulasan", "DESC"];
+        const range = req.query.range ? JSON.parse(req.query.range) : [0, 9];
+        const filter = req.query.filter ? JSON.parse(req.query.filter) : {};
+
+        if (sort[0] === 'id') sort[0] = 'u.id_ulasan';
+        else sort[0] = 'u.' + sort[0]; // Asumsi sort field ada di tabel ulasan
+
+        const [sortField, sortOrder] = sort;
+        const [start, end] = range;
+        const limit = Math.max(0, (Number(end) - Number(start) + 1) || 10);
+        const offset = Math.max(0, Number(start) || 0);
+
+        // 2. Filter
+        const whereClauses = [];
+        const params = [];
+
+        if (filter.q) {
+            // Search di komentar atau nama user
+            whereClauses.push('(u.komentar LIKE ? OR usr.nama LIKE ?)');
+            params.push(`%${filter.q}%`, `%${filter.q}%`);
+        }
+
+        if (filter.id_produk) {
+            whereClauses.push('u.id_produk = ?');
+            params.push(filter.id_produk);
+        }
+
+        const whereSql = whereClauses.length ? `WHERE ${whereClauses.join(' AND ')}` : '';
+
+        // 3. Count Total
+        const [[{ total }]] = await connection.query(
+            `SELECT COUNT(*) AS total 
+             FROM Ulasan u 
+             LEFT JOIN User usr ON u.id_user = usr.user_id 
+             ${whereSql}`,
+            params
+        );
+
+        // 4. Query Data
         const query = `
             SELECT 
                 u.id_ulasan AS id, 
@@ -64,17 +105,26 @@ const getAllUlasan = async (req, res) => {
             LEFT JOIN User usr ON u.id_user = usr.user_id
             LEFT JOIN Produk p ON u.id_produk = p.id_produk
             LEFT JOIN Layanan_modifikasi l ON u.id_layanan = l.id_layanan
+            ${whereSql}
+            ORDER BY ${sortField} ${sortOrder}
+            LIMIT ? OFFSET ?
         `;
-        const [rows] = await db.query(query);
 
-        // Header Content-Range wajib untuk React-Admin list view
-        res.set('Content-Range', `ulasan 0-${rows.length}/${rows.length}`);
+        const [rows] = await connection.query(query, [...params, limit, offset]);
+
+        // 5. Response
+        const safeStart = isNaN(offset) ? 0 : offset;
+        const safeEnd = rows.length ? safeStart + rows.length - 1 : safeStart;
+
+        res.set('Content-Range', `ulasan ${safeStart}-${safeEnd}/${total}`);
         res.set('Access-Control-Expose-Headers', 'Content-Range');
 
         res.json(rows);
     } catch (error) {
         console.error('Failed to fetch all ulasan:', error);
         res.status(500).json({ message: 'Server Error fetching ulasan.' });
+    } finally {
+        if (connection) connection.release();
     }
 };
 
