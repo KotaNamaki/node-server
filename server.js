@@ -47,7 +47,7 @@ app.use(express.json());
             cookie: {
                 httpOnly: true,
                 secure: false,
-                maxAge: 60 * 60 * 24
+                maxAge: 1000 * 60 * 60 * 24
             }
         }));
         console.log(
