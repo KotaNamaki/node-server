@@ -1,226 +1,224 @@
-# API Documentation — Quick Guide
+# Dokumentasi API E-Commerce
 
-## 1) What API is this
+Dokumentasi ini menjelaskan endpoint yang tersedia pada server backend, cara autentikasi, dan contoh penggunaan menggunakan Fetch API di sisi frontend.
 
-A Node.js (Express) REST API for an e-commerce/service app named MotoDiv. It covers authentication, products (with image uploads), carts, orders and payments, services (layanan), reviews (ulasan), and user profiles.
+## Informasi Dasar
 
-## 2) What its function is
+* **Base URL:** `http://localhost:3000` (atau domain produksi Anda)
+* **Autentikasi:** Session-based (Cookies).
+* **Penting:** Semua request dari frontend **wajib** menyertakan `credentials: 'include'` agar cookies sesi terbaca oleh server.
 
-- Authenticate users and maintain session-based login
-- Manage product catalog with image upload/storage
-- Let users manage carts and place orders, with payment step
-- Manage service offerings (layanan)
-- Allow customers to create/read product reviews
-- Read and update user profile data
+-----
 
-## 3) How it functions
+## 1\. Authentication (`/auth`)
 
-- Base URL: http://localhost:3000
-- Auth: httpOnly session cookies (frontend must send withCredentials)
-- Database: MySQL via `mysql2`
-- Sessions: `express-mysql-session`
-- File uploads: `middleware/uploadMiddleware.js`; images are uploaded to Appwrite via `services/appwriteServices.js` and accessible through stored URLs
-- Access control: public endpoints (product browsing), authenticated endpoints (cart, orders, posting reviews), admin-only for create/update/delete on protected resources
+| Method | Endpoint | Deskripsi | Body / Params | Auth |
+| :--- | :--- | :--- | :--- | :--- |
+| `POST` | `/auth/login` | Masuk ke sistem | `{ "email": "...", "password": "..." }` | Public |
+| `POST` | `/auth/register` | Daftar user baru | `{ "nama": "...", "email": "...", "password": "...", "no_hp": "...", "role": "customer" }` | Public |
+| `GET` | `/auth/check-session` | Cek status login | - | Public |
+| `POST` | `/auth/logout` | Keluar sesi | - | User |
 
-## 4) How to use it
+-----
 
-- From a browser app, configure your HTTP client to send cookies.
-- Use `application/json` for normal requests; use `multipart/form-data` for endpoints that send files (e.g., create/update product).
+## 2\. Produk (`/products`)
 
-Axios setup example:
-```
-import axios from 'axios';
+Endpoint GET mendukung parameter React-Admin: `sort`, `range`, `filter`.
 
-export const api = axios.create({
-  baseURL: 'http://localhost:3000',
-  withCredentials: true,
-  headers: { 'Content-Type': 'application/json' }
-});
-```
+| Method | Endpoint | Deskripsi | Body / Params | Auth |
+| :--- | :--- | :--- | :--- | :--- |
+| `GET` | `/products` | List semua produk | Query: `?sort=["id","ASC"]&range=[0,9]&filter={"q":"nama"}` | Public |
+| `GET` | `/products/:id` | Detail produk | - | Public |
+| `POST` | `/products` | Tambah produk | **FormData**: `nama`, `kategori`, `deskripsi`, `harga`, `stok`, `gambar` (File) | Admin |
+| `PATCH` | `/products/:id` | Update produk | **FormData**: (sama seperti POST) | Admin |
+| `DELETE` | `/products/:id` | Hapus produk | - | Admin |
 
-## 5) Examples of each use
+-----
 
-Authentication
-- Login
-```
-await api.post('/auth/login', { email: 'user@example.com', password: 'secret' });
-```
-- Check Session
-```
-await api.get('/auth/check-session');
-```
-- Register
-```
-await api.post('/auth/register', { nama: 'Budi', email: 'budi@example.com', password: 'secret', no_hp: '08123' });
-```
-- Logout
-```
-await api.post('/auth/logout');
-```
+## 3\. Keranjang & Order (`/cart` & `/orders`)
 
-Products (React-Admin compatible)
-- List products (supports sort/range/filter)
-```
-// Example: first page (0-24), sort by nama ASC
-await api.get('/products', {
-  params: {
-    sort: JSON.stringify(["nama","ASC"]),
-    range: JSON.stringify([0,24]),
-    filter: JSON.stringify({ q: "ban" })
+Sistem Order menggunakan transaksi database. Stok dikunci saat checkout.
+
+| Method | Endpoint | Deskripsi | Body / Params | Auth |
+| :--- | :--- | :--- | :--- | :--- |
+| **CART** | | | | |
+| `GET` | `/cart` | Lihat isi keranjang | - | User |
+| `POST` | `/cart/items` | Tambah item | `{ "id_produk": 1, "qty": 2 }` | User |
+| `PATCH` | `/cart/items/:id` | Update qty item | `{ "qty": 5 }` (ID Produk di URL) | User |
+| `DELETE` | `/cart/items/:id` | Hapus item | (ID Produk di URL) | User |
+| **ORDER** | | | | |
+| `POST` | `/orders` | **Checkout** | - (Otomatis ambil dari cart) | User |
+| `GET` | `/orders/:id` | Detail pesanan | - | User/Admin |
+| `POST` | `/orders/:id/payments` | Bayar pesanan | `{ "method": "QRIS", "amount": 50000 }` | User |
+| `GET` | `/orders` | List pesanan (Admin) | Query: React-Admin params | Admin |
+| `PATCH` | `/orders/:id` | Update status (Admin) | `{ "status_pesanan": "dikirim" }` | Admin |
+
+-----
+
+## 4\. Users (`/users`)
+
+| Method | Endpoint | Deskripsi | Body / Params | Auth |
+| :--- | :--- | :--- | :--- | :--- |
+| `GET` | `/users/:id` | Get Profile User | - | User |
+| `PATCH` | `/users/update/:id` | Update Profile | `{ "nama": "...", "no_hp": "..." }` | User |
+| `GET` | `/users` | List All Users | Query: React-Admin params | Admin |
+| `DELETE` | `/users/:id` | Hapus User | - | Admin |
+
+-----
+
+## 5\. Layanan Modifikasi (`/layanan`)
+
+| Method | Endpoint | Deskripsi | Body / Params | Auth |
+| :--- | :--- | :--- | :--- | :--- |
+| `GET` | `/layanan` | List Layanan | Query: React-Admin params | Public |
+| `GET` | `/layanan/:id` | Detail Layanan | - | Public |
+| `POST` | `/layanan` | Tambah Layanan | `{ "nama_layanan": "...", "estimasi_harga": 100000, ... }` | Admin |
+
+-----
+
+## Contoh Penggunaan (Frontend Fetch)
+
+Berikut adalah contoh cara menggunakan `fetch` untuk berbagai operasi. **PENTING:** Selalu gunakan `credentials: 'include'` untuk menangani sesi login.
+
+### 1\. READ (GET Data)
+
+Contoh mengambil data keranjang belanja.
+
+```javascript
+const getCart = async () => {
+  try {
+    const response = await fetch('http://localhost:3000/cart', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      credentials: 'include' // WAJIB: Agar server tahu siapa yang login
+    });
+
+    const result = await response.json();
+    console.log('Isi Keranjang:', result);
+  } catch (error) {
+    console.error('Error:', error);
   }
-});
-// Note: server returns header `Content-Range: products start-end/total`
-// CORS exposes this header via `exposedHeaders: ['Content-Range']`
-```
-- Product detail
-```
-await api.get('/products/1');
-```
-- Create product (admin, with image). Response returns full object with `id`.
-```
-const data = new FormData();
-data.append('nama', 'Ban Premium');
-data.append('harga', 150000);
-data.append('stok', 10);
-data.append('gambar', fileInput.files[0]);
-await api.post('/products', data, { headers: { 'Content-Type': 'multipart/form-data' }});
-// -> { id, nama, kategori, deskripsi, harga, stok, gambar: [url,...] }
-```
-- Update product (admin). Response returns updated object with `id`.
-```
-const data2 = new FormData();
-data2.append('nama', 'Ban Premium X');
-await api.patch('/products/1', data2, { headers: { 'Content-Type': 'multipart/form-data' }});
-// -> { id, nama, deskripsi, harga, stok, gambar }
-```
-- Delete product (admin). Response returns `{ id }`.
-```
-await api.delete('/products/1');
-// -> { id: 1 }
+};
 ```
 
-Cart (requires login)
-- Get cart
-```
-await api.get('/cart');
-```
-- Add item
-```
-await api.post('/cart/items', { id_produk: 1, qty: 2 });
-```
-- Update item qty
-```
-await api.patch('/cart/items/10', { qty: 5 });
-```
-- Remove item
-```
-await api.delete('/cart/items/10');
-```
+### 2\. CREATE (POST JSON)
 
-Orders (requires login)
-- Checkout
-```
-await api.post('/orders');
-```
-- Pay order
-```
-await api.post('/orders/123/payments', { method: 'QRIS', amount: 50000 });
-```
-- Order detail
-```
-await api.get('/orders/123');
-```
-- Admin: list all orders (React-Admin compatible, returns `Content-Range`)
-```
-await api.get('/orders', {
-  params: {
-    sort: JSON.stringify(["created_at","DESC"]),
-    range: JSON.stringify([0,24]),
-    filter: JSON.stringify({
-      // Supported filters:
-      // q: search by customer name/email or order id
-      // status or status_pesanan: e.g. 'pending', 'diproses', 'selesai'
-      // id or id_pesanan: number or array of numbers
-      // created_at_gte / created_at_lte (or createdAt_gte / createdAt_lte): ISO date strings
-      status: 'pending',
-      createdAt_gte: '2025-01-01',
-      createdAt_lte: '2025-12-31'
-    })
+Contoh melakukan login atau checkout.
+
+```javascript
+const loginUser = async (email, password) => {
+  try {
+    const response = await fetch('http://localhost:3000/auth/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      credentials: 'include', // Simpan cookie sesi setelah login sukses
+      body: JSON.stringify({ email, password })
+    });
+
+    const result = await response.json();
+    if (response.ok) {
+      alert('Login Berhasil!');
+    } else {
+      alert('Gagal: ' + result.message);
+    }
+  } catch (error) {
+    console.error('Error:', error);
   }
-});
-// Note: server returns header `Content-Range: orders start-end/total`
-// and exposes it via CORS so the frontend can read it
-```
-- Admin: update status
-```
-await api.post('/orders/123/status', { status: 'diproses' });
+};
 ```
 
-Analytics (admin only)
-```
-// Dashboard counters
-await api.get('/analytics/orders/counters', { params: { lastDays: 7 } });
-// -> { last7DaysOrders, pendingOrders, windowDays }
+### 3\. CREATE/UPDATE (Multipart/Form-Data)
 
-// Monthly sales buckets
-await api.get('/analytics/sales/by-month', {
-  params: { from: '2025-01-01', to: '2025-12-31' }
-});
-// -> { buckets: [{ period: 'YYYY-MM', total }], from, to }
-```
+Khusus untuk **Produk** yang membutuhkan upload gambar, jangan gunakan `Content-Type: application/json`. Gunakan `FormData`.
 
-Services (Layanan)
-- List
-```
-await api.get('/layanan');
-```
-- Admin: create
-```
-await api.post('/layanan', { nama_layanan: 'Ganti Oli', harga: 75000 });
-```
-- Admin: delete
-```
-await api.delete('/layanan/5');
-```
+```javascript
+const addProduct = async (fileInput, productData) => {
+  const formData = new FormData();
+  
+  // Append data text
+  formData.append('nama', productData.nama);
+  formData.append('harga', productData.harga);
+  formData.append('stok', productData.stok);
+  formData.append('kategori', productData.kategori);
+  formData.append('deskripsi', productData.deskripsi);
 
-Reviews (Ulasan)
-- Get for a product
-```
-await api.get('/ulasan/produk/1');
-```
-- Create review (customer)
-```
-await api.post('/ulasan', { id_produk: 1, rating: 5, komentar: 'Mantap!' });
-```
+  // Append files (bisa multiple karena upload.array('gambar', 5))
+  for (let i = 0; i < fileInput.files.length; i++) {
+    formData.append('gambar', fileInput.files[i]);
+  }
 
-User Profile
-- Get profile
-```
-await api.get('/users/1');
-```
-- Update own profile
-```
-await api.patch('/users/update/1', { nama: 'Budi Update', password: 'newpass' });
+  try {
+    const response = await fetch('http://localhost:3000/products', {
+      method: 'POST',
+      credentials: 'include',
+      // JANGAN set Content-Type header secara manual saat pakai FormData!
+      body: formData 
+    });
+
+    const result = await response.json();
+    console.log('Produk tersimpan:', result);
+  } catch (error) {
+    console.error('Upload gagal:', error);
+  }
+};
 ```
 
----
+### 4\. UPDATE (PATCH JSON)
 
-## Notes for React-Admin integration
+Contoh mengubah jumlah item di keranjang.
 
-- Data Provider: You can use `ra-data-simple-rest` pointing to the API base URL (`/`).
-- Requirements satisfied by this API:
-  - GET_LIST at `GET /products?sort=["field","ASC"]&range=[start,end]&filter={}` with `Content-Range` header.
-  - GET_LIST at `GET /orders?sort=["field","ASC|DESC"]&range=[start,end]&filter={}` with `Content-Range` header.
-    - Supported filters: `q`, `status`/`status_pesanan`, `id`/`id_pesanan` (number or array),
-      `created_at_gte`/`created_at_lte` or `createdAt_gte`/`createdAt_lte` (ISO date).
-  - GET_ONE at `GET /products/:id` returns object with `id`.
-  - GET_ONE at `GET /orders/:id` returns order with items and optional payment.
-  - CREATE returns created object with `id`.
-  - UPDATE returns updated object with `id`.
-  - DELETE returns `{ id }`.
-- Auth: this API uses session cookies. Ensure your React app performs requests with `credentials: 'include'`.
-- File upload: send `multipart/form-data` for product create/update; images are uploaded to Appwrite and URLs are stored in DB.
+```javascript
+const updateCartItem = async (productId, newQty) => {
+  try {
+    const response = await fetch(`http://localhost:3000/cart/items/${productId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      credentials: 'include',
+      body: JSON.stringify({ qty: newQty })
+    });
 
-Additional notes
-- CORS is configured to expose the `Content-Range` header so admin UIs can read totals.
-- Analytics endpoints are protected by `authReq` + `adminReq` middleware; ensure the logged-in user has role `admin`.
+    if (response.ok) {
+      console.log('Qty berhasil diubah');
+    }
+  } catch (error) {
+    console.error('Error:', error);
+  }
+};
+```
+
+### 5\. DELETE
+
+Contoh menghapus item dari keranjang.
+
+```javascript
+const deleteCartItem = async (productId) => {
+  try {
+    const response = await fetch(`http://localhost:3000/cart/items/${productId}`, {
+      method: 'DELETE',
+      credentials: 'include'
+    });
+
+    if (response.ok) {
+      console.log('Item dihapus');
+    }
+  } catch (error) {
+    console.error('Error:', error);
+  }
+};
+```
+
+## Catatan React-Admin
+
+Jika Anda membangun dashboard admin menggunakan React-Admin, endpoint `GET` (List) sudah dikonfigurasi untuk menerima parameter query berikut:
+
+* `filter`: JSON String (contoh: `{"q": "helm"}`)
+* `range`: JSON String (contoh: `[0, 9]` untuk pagination)
+* `sort`: JSON String (contoh: `["id", "DESC"]`)
+
+Respon akan menyertakan header `Content-Range` yang dibutuhkan React-Admin (contoh: `products 0-9/50`).
